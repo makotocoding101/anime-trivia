@@ -1,0 +1,27 @@
+{
+  "_comment": "Placeholder modes sized to the placeholder bank. Real modes (series-specific, genre, seasonal) are INSERTs once the real question bank lands.",
+  "modes": [
+    {
+      "slug": "quick-5",
+      "name": "Quick 5",
+      "blurb": "Five questions, any difficulty. The whole loop in two minutes.",
+      "series": null,
+      "required_tags": [],
+      "difficulty_min": 1,
+      "difficulty_max": 3,
+      "question_count": 5,
+      "seconds_per_q": 20
+    },
+    {
+      "slug": "hard-3",
+      "name": "Hard 3",
+      "blurb": "Three questions, difficulty 2 and up, shorter clock.",
+      "series": null,
+      "required_tags": [],
+      "difficulty_min": 2,
+      "difficulty_max": 3,
+      "question_count": 3,
+      "seconds_per_q": 15
+    }
+  ]
+}

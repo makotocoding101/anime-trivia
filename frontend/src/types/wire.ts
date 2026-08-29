@@ -143,7 +143,7 @@ export const TARGETED_TYPES: ReadonlySet<string> = new Set([
 
 export type ClientFrame =
   | { type: "join"; name: string }
-  | { type: "start_game" }
+  | { type: "start_game"; mode_id: number }
   | { type: "submit_answer"; round_seq: number; option_id: number; cid?: string }
   | { type: "set_ready"; ready: boolean }
   | { type: "kick"; target_id: string }

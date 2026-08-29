@@ -59,6 +59,7 @@ class JoinFrame(_Frame):
 
 class StartGameFrame(_Frame):
     type: Literal["start_game"]
+    mode_id: int = Field(ge=0)
 
 
 class SubmitAnswerFrame(_Frame):

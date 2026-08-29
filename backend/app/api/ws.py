@@ -10,12 +10,11 @@ Disconnect command like any other.
 from __future__ import annotations
 
 import logging
-import random
 import uuid
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
-from app.game.deck import sample_deck
+from app.game.errors import GameError
 from app.game.events import (
     Command,
     Disconnect,
@@ -27,10 +26,10 @@ from app.game.events import (
     StartGame,
     SubmitAnswer,
 )
-from app.game.state import GameConfig, LoadedQuestion, PlayerId
+from app.game.state import PlayerId
 from app.rooms.connection import Connection
 from app.rooms.registry import InProcessRegistry
-from app.rooms.room import RoomClosed
+from app.rooms.room import Room, RoomClosed
 from app.schemas.wire import (
     ClientFrame,
     FrameError,
@@ -46,6 +45,7 @@ from app.schemas.wire import (
     parse_client_frame,
     pong_frame,
 )
+from app.store import GameStore
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -77,7 +77,7 @@ async def ws_room(websocket: WebSocket) -> None:
         await websocket.close(code=4400, reason="join_first")
         return
 
-    player_id: PlayerId = uuid.uuid4().hex[:12]
+    player_id: PlayerId = str(uuid.uuid4())
     conn = Connection(player_id, websocket)
     try:
         room.attach(conn)
@@ -99,7 +99,10 @@ async def ws_room(websocket: WebSocket) -> None:
             if isinstance(frame, PingFrame):
                 conn.try_send(pong_frame(frame.t0))
                 continue
-            room.inbox.put_nowait(_to_command(frame, player_id, websocket))
+            if isinstance(frame, StartGameFrame):
+                await _start_game(room, conn, frame, player_id, websocket)
+                continue
+            room.inbox.put_nowait(_to_command(frame, player_id))
     except WebSocketDisconnect:
         pass
     finally:
@@ -110,7 +113,34 @@ async def ws_room(websocket: WebSocket) -> None:
             room.inbox.put_nowait(Disconnect(player_id=player_id))
 
 
-def _to_command(frame: ClientFrame, player_id: PlayerId, websocket: WebSocket) -> Command:
+async def _start_game(
+    room: Room,
+    conn: Connection,
+    frame: StartGameFrame,
+    player_id: PlayerId,
+    websocket: WebSocket,
+) -> None:
+    """Loading the deck is I/O, so it happens here — in the socket handler,
+    never the room task (§06: one SELECT at game start). Two racing starts
+    both load; the domain's idempotent-start guard discards the loser."""
+    store: GameStore = websocket.app.state.store
+    try:
+        deck, config = await store.load_deck(frame.mode_id)
+    except GameError as exc:
+        conn.try_send(error_frame(exc.code, seq=room.state.seq))
+        return
+    room.inbox.put_nowait(
+        StartGame(
+            player_id=player_id,
+            deck=deck,
+            config=config,
+            mode_id=frame.mode_id,
+            game_id=str(uuid.uuid4()),
+        )
+    )
+
+
+def _to_command(frame: ClientFrame, player_id: PlayerId) -> Command:
     match frame:
         case SubmitAnswerFrame():
             return SubmitAnswer(
@@ -119,12 +149,6 @@ def _to_command(frame: ClientFrame, player_id: PlayerId, websocket: WebSocket) -
                 option_id=frame.option_id,
                 cid=frame.cid,
             )
-        case StartGameFrame():
-            bank: tuple[LoadedQuestion, ...] = websocket.app.state.question_bank
-            config: GameConfig = websocket.app.state.game_config
-            count = min(config.question_count, len(bank))
-            deck = sample_deck(bank, count, random.Random())  # R-15: one draw per game
-            return StartGame(player_id=player_id, deck=deck, config=config)
         case SetReadyFrame():
             return SetReady(player_id=player_id, ready=frame.ready)
         case KickFrame():
@@ -136,5 +160,5 @@ def _to_command(frame: ClientFrame, player_id: PlayerId, websocket: WebSocket) -
             return Leave(player_id=player_id)
         case RematchFrame():
             return Rematch(player_id=player_id)
-        case PingFrame():  # handled inline by the recv loop; never reaches here
-            raise AssertionError("ping frames are answered at the boundary")
+        case PingFrame() | StartGameFrame():  # both handled by the recv loop
+            raise AssertionError("frame is handled at the boundary, not here")

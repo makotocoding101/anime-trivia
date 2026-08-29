@@ -11,9 +11,12 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import logging
+import uuid
 from collections.abc import Callable
 from dataclasses import dataclass
+from datetime import UTC, datetime
 
+from app.game import scoring
 from app.game.clock import Clock
 from app.game.errors import GameError
 from app.game.events import (
@@ -22,14 +25,17 @@ from app.game.events import (
     Disconnect,
     Error,
     Event,
+    GameOver,
     IntroElapsed,
     PlayerLeft,
     RevealElapsed,
+    StartGame,
 )
 from app.game.state import Phase, PlayerId, RoomState
 from app.game.transition import transition
 from app.rooms.connection import Connection
 from app.schemas.wire import WireEncoder
+from app.store import GameRecord, GameStore, StandingRow
 
 logger = logging.getLogger(__name__)
 
@@ -59,6 +65,16 @@ class _SweepCheck:
     epoch: int
 
 
+@dataclass(slots=True, frozen=True)
+class _GameMeta:
+    """Persistence context for the game in flight, captured when StartGame
+    is accepted and consumed exactly once at GameOver."""
+
+    game_id: str
+    mode_id: int
+    started_at: datetime
+
+
 class RoomClosed(Exception):
     """Raised on attach() to a room whose task has already stopped."""
 
@@ -69,6 +85,7 @@ class Room:
         code: str,
         clock: Clock,
         on_stopped: Callable[[Room], None] | None = None,
+        store: GameStore | None = None,
     ) -> None:
         self.code = code
         self.clock = clock
@@ -81,6 +98,9 @@ class Room:
         self._timer: asyncio.Task[None] | None = None
         self._task: asyncio.Task[None] | None = None
         self._sweeper: asyncio.Task[None] | None = None
+        self._store = store
+        self._game_meta: _GameMeta | None = None
+        self._persist_tasks: set[asyncio.Task[None]] = set()
         self._epoch = 0  # bumped on every attach; fences _SweepCheck
 
     # ------------------------------------------------------------------
@@ -109,8 +129,17 @@ class Room:
                     # schema discipline, applied to ourselves). Log loudly.
                     logger.exception("transition failed on %r in room %s", cmd, self.code)
                     continue
+                if isinstance(cmd, StartGame) and events:
+                    # Non-empty events == the start was accepted, not the
+                    # idempotent-ignore path; stamp this game's meta now.
+                    self._game_meta = _GameMeta(
+                        game_id=cmd.game_id or str(uuid.uuid4()),
+                        mode_id=cmd.mode_id if cmd.mode_id is not None else 0,
+                        started_at=datetime.now(UTC),
+                    )
                 self._dispatch(events)
                 self._close_departed(events)
+                self._maybe_persist(events)
                 self._reschedule_timer()
         finally:
             self._shutdown()
@@ -214,6 +243,51 @@ class Room:
             if round_seq != self.state.round_seq:
                 return  # stale generation — the round moved on without us (R-03)
             self.inbox.put_nowait(command_cls(round_seq=round_seq))
+
+    def _maybe_persist(self, events: list[Event]) -> None:
+        """One INSERT batch at game end (spec §06) — built synchronously from
+        state so a following rematch cannot mutate what gets written, then
+        handed to a background task so the room task never awaits the DB."""
+        if self._store is None or self._game_meta is None:
+            return
+        if not any(isinstance(e, GameOver) for e in events):
+            return
+        meta, self._game_meta = self._game_meta, None
+
+        participants = {pid for rnd in self.state.history for pid in rnd.entries}
+        players = [p for p in self.state.players.values() if p.id in participants]
+        standings = tuple(
+            StandingRow(
+                player_id=p.id,
+                name=p.name,
+                final_score=p.score,
+                final_rank=rank,
+                total_elapsed_ms=p.total_elapsed_ms,
+            )
+            for rank, p in enumerate(scoring.rank(players), start=1)
+        )
+        record = GameRecord(
+            game_id=meta.game_id,
+            room_code=self.code,
+            mode_id=meta.mode_id,
+            started_at=meta.started_at,
+            ended_at=datetime.now(UTC),
+            question_count=len(self.state.deck),
+            history=tuple(self.state.history),
+            standings=standings,
+        )
+        task = asyncio.create_task(self._persist(record), name=f"persist:{self.code}")
+        self._persist_tasks.add(task)
+        task.add_done_callback(self._persist_tasks.discard)
+
+    async def _persist(self, record: GameRecord) -> None:
+        assert self._store is not None
+        try:
+            await self._store.record_game(record)
+        except Exception:
+            # Results are nice-to-have; the live room must not care (§06 —
+            # nothing during a round, and nothing fatal after it either).
+            logger.exception("failed to record game %s in room %s", record.game_id, self.code)
 
 
 def _rejection(cmd: Command | _SweepCheck, exc: GameError) -> list[Event]:

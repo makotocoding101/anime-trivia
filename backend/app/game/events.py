@@ -62,6 +62,13 @@ class StartGame:
     player_id: PlayerId
     deck: tuple[LoadedQuestion, ...]
     config: GameConfig
+    # Persistence context, minted by the socket layer and read back by the
+    # room layer when the game actually starts. Riding the command keeps meta
+    # capture inside the single-writer path, so a duplicate or rejected start
+    # can never attach meta to a game that did not begin. The domain itself
+    # never reads these.
+    mode_id: int | None = None
+    game_id: str | None = None
 
 
 @dataclass(slots=True, frozen=True)

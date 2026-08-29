@@ -96,3 +96,10 @@ label { display: flex; flex-direction: column; gap: 6px; color: var(--dim); }
 .standings { width: 100%; max-width: 360px; padding: 0 0 0 24px; margin: 0; }
 .standings li { display: flex; padding: 6px 0; border-bottom: 1px solid var(--line); }
 .standings .score { margin-left: auto; font-variant-numeric: tabular-nums; }
+
+.modes { list-style: none; padding: 0; margin: 8px 0 0; display: flex; flex-direction: column; gap: 6px; }
+.mode { display: grid; grid-template-columns: auto auto 1fr; gap: 4px 10px; align-items: baseline; background: var(--panel); border: 2px solid var(--line); border-radius: 6px; padding: 10px 12px; cursor: pointer; }
+.mode.picked { border-color: var(--accent); }
+.mode input { accent-color: var(--accent); }
+.mode-name { font-weight: 600; }
+.mode-blurb { grid-column: 2 / 4; font-size: 13px; }

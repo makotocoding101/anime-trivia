@@ -53,6 +53,23 @@ def test_health(client: TestClient) -> None:
     assert body["ok"] is True
 
 
+def test_modes_lists_the_seed_stores_synthetic_mode(client: TestClient) -> None:
+    modes = client.get("/api/modes").json()
+    assert len(modes) == 1
+    assert modes[0]["id"] == 1
+    assert modes[0]["question_count"] == 2  # mirrors the FAST base config
+
+
+def test_start_with_unknown_mode_bounces(client: TestClient) -> None:
+    code = make_room(client)
+    with client.websocket_connect(f"/ws/rooms/{code}") as ws:
+        send(ws, type="join", name="aoi")
+        recv_until(ws, "snapshot")
+        send(ws, type="start_game", mode_id=99)
+        error = recv_until(ws, "error")
+        assert error["data"]["code"] == "mode_not_found"
+
+
 def test_join_yields_snapshot_and_peers_see_it(client: TestClient) -> None:
     code = make_room(client)
     with client.websocket_connect(f"/ws/rooms/{code}") as ws1:
@@ -112,7 +129,7 @@ def test_full_game_over_real_sockets(client: TestClient) -> None:
         send(ws2, type="join", name="ren")
         recv_until(ws2, "snapshot")
 
-        send(ws1, type="start_game")
+        send(ws1, type="start_game", mode_id=1)
         for round_no in range(2):
             q1 = recv_until(ws1, "question")
             q2 = recv_until(ws2, "question")
@@ -151,7 +168,7 @@ def test_disconnect_mid_round_greys_player_and_game_continues(client: TestClient
         send(ws2, type="join", name="ren")
         recv_until(ws2, "snapshot")
 
-        send(ws1, type="start_game")
+        send(ws1, type="start_game", mode_id=1)
         recv_until(ws1, "question")
         ws2.__exit__(None, None, None)  # ren's laptop lid closes mid-round
 
