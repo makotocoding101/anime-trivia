@@ -282,7 +282,18 @@ def _on_rematch(state: RoomState, cmd: Rematch) -> list[Event]:
     state.round_index = -1
     state.history = []
     state.phase_deadline = None
-    return [PhaseChanged(phase=state.phase, round_seq=state.round_seq, round_index=-1)]
+    # Everyone gets a fresh snapshot: scores, ready flags and spectator state
+    # all just reset, and a PhaseChanged alone would leave clients rendering
+    # stale rows. Same machinery as reconnect (R-11) — full state, no deltas.
+    events: list[Event] = [
+        PhaseChanged(phase=state.phase, round_seq=state.round_seq, round_index=-1)
+    ]
+    events += [
+        Snapshot(to=p.id, view=public_view(state, p.id))
+        for p in state.players.values()
+        if p.conn is ConnState.LIVE
+    ]
+    return events
 
 
 # --------------------------------------------------------------------------

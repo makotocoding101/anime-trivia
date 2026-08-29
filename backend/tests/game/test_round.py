@@ -251,3 +251,21 @@ def test_question_opened_event_shape(driver: Driver) -> None:
     assert q.question_count == 3
     assert q.deadline == pytest.approx(q.opened_at + CONFIG.seconds_per_question)
     assert len(q.options) == 4
+
+
+def test_rematch_sends_fresh_snapshots_to_live_players(driver: Driver) -> None:
+    from app.game.events import Snapshot
+
+    driver.join("p0", "p1")
+    driver.start(deck_n=1)
+    driver.open_question()
+    submit(driver, "p0")
+    submit(driver, "p1")
+    driver.do(RevealElapsed(round_seq=driver.state.round_seq))
+    events = driver.do(Rematch(player_id="p0"))
+    snaps = events_of(events, Snapshot)
+    # One per live player, and the view inside already shows the reset state.
+    assert sorted(s.to for s in snaps) == ["p0", "p1"]
+    players = snaps[0].view["players"]
+    assert isinstance(players, list)
+    assert all(row["score"] == 0 for row in players)
