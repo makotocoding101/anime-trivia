@@ -1,0 +1,185 @@
+{
+  "_comment": "Placeholder bank - each prompt names its own correct option so mechanics can be tested deliberately. Real question bank replaces this in M4.",
+  "questions": [
+    {
+      "id": 1,
+      "kind": "text",
+      "prompt": "Placeholder Q1 (difficulty 1): pick option A.",
+      "difficulty": 1,
+      "options": [
+        "Option A",
+        "Option B",
+        "Option C",
+        "Option D"
+      ],
+      "correct": 0,
+      "series": null,
+      "tags": [
+        "placeholder"
+      ],
+      "media": null
+    },
+    {
+      "id": 2,
+      "kind": "text",
+      "prompt": "Placeholder Q2 (difficulty 1): pick option C.",
+      "difficulty": 1,
+      "options": [
+        "Option A",
+        "Option B",
+        "Option C",
+        "Option D"
+      ],
+      "correct": 2,
+      "series": null,
+      "tags": [
+        "placeholder"
+      ],
+      "media": null
+    },
+    {
+      "id": 3,
+      "kind": "text",
+      "prompt": "Placeholder Q3 (difficulty 1): pick option D.",
+      "difficulty": 1,
+      "options": [
+        "Option A",
+        "Option B",
+        "Option C",
+        "Option D"
+      ],
+      "correct": 3,
+      "series": null,
+      "tags": [
+        "placeholder"
+      ],
+      "media": null
+    },
+    {
+      "id": 4,
+      "kind": "text",
+      "prompt": "Placeholder Q4 (difficulty 1): pick option B.",
+      "difficulty": 1,
+      "options": [
+        "Option A",
+        "Option B",
+        "Option C",
+        "Option D"
+      ],
+      "correct": 1,
+      "series": null,
+      "tags": [
+        "placeholder"
+      ],
+      "media": null
+    },
+    {
+      "id": 5,
+      "kind": "text",
+      "prompt": "Placeholder Q5 (difficulty 2): pick option B.",
+      "difficulty": 2,
+      "options": [
+        "Option A",
+        "Option B",
+        "Option C",
+        "Option D"
+      ],
+      "correct": 1,
+      "series": null,
+      "tags": [
+        "placeholder"
+      ],
+      "media": null
+    },
+    {
+      "id": 6,
+      "kind": "text",
+      "prompt": "Placeholder Q6 (difficulty 2): pick option D.",
+      "difficulty": 2,
+      "options": [
+        "Option A",
+        "Option B",
+        "Option C",
+        "Option D"
+      ],
+      "correct": 3,
+      "series": null,
+      "tags": [
+        "placeholder"
+      ],
+      "media": null
+    },
+    {
+      "id": 7,
+      "kind": "text",
+      "prompt": "Placeholder Q7 (difficulty 2): pick option A.",
+      "difficulty": 2,
+      "options": [
+        "Option A",
+        "Option B",
+        "Option C",
+        "Option D"
+      ],
+      "correct": 0,
+      "series": null,
+      "tags": [
+        "placeholder"
+      ],
+      "media": null
+    },
+    {
+      "id": 8,
+      "kind": "text",
+      "prompt": "Placeholder Q8 (difficulty 3): pick option C.",
+      "difficulty": 3,
+      "options": [
+        "Option A",
+        "Option B",
+        "Option C",
+        "Option D"
+      ],
+      "correct": 2,
+      "series": null,
+      "tags": [
+        "placeholder"
+      ],
+      "media": null
+    },
+    {
+      "id": 9,
+      "kind": "text",
+      "prompt": "Placeholder Q9 (difficulty 3): pick option A.",
+      "difficulty": 3,
+      "options": [
+        "Option A",
+        "Option B",
+        "Option C",
+        "Option D"
+      ],
+      "correct": 0,
+      "series": null,
+      "tags": [
+        "placeholder"
+      ],
+      "media": null
+    },
+    {
+      "id": 10,
+      "kind": "text",
+      "prompt": "Placeholder Q10 (difficulty 3): pick option D.",
+      "difficulty": 3,
+      "options": [
+        "Option A",
+        "Option B",
+        "Option C",
+        "Option D"
+      ],
+      "correct": 3,
+      "series": null,
+      "tags": [
+        "placeholder"
+      ],
+      "media": null
+    }
+  ]
+}
