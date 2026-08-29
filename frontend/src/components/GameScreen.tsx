@@ -2,7 +2,9 @@ import { useCountdown } from "../hooks/useCountdown";
 import type { RoomSocket } from "../net/socket";
 import type { RoomView } from "../store/room";
 import { useRoomStore } from "../store/room";
-import { PlayerList } from "./PlayerList";
+import { AnswerTile, type TileState } from "./AnswerTile";
+import { Leaderboard } from "./Leaderboard";
+import { TimerRing } from "./TimerRing";
 
 interface Props {
   view: RoomView;
@@ -10,111 +12,184 @@ interface Props {
 }
 
 export function GameScreen({ view, socket }: Props) {
-  if (view.phase === "INTRO" || view.question === null) {
-    return (
-      <main className="center">
-        <h2 className="round-title">
-          round {view.roundIndex + 1}
-          {view.questionCount > 0 && <span className="dim"> of {view.questionCount}</span>}
-        </h2>
-        <p className="dim">get ready…</p>
-        <PlayerList view={view} />
-      </main>
-    );
-  }
+  if (view.question === null) return <IntroBody view={view} />;
   if (view.phase === "REVEAL" && view.reveal !== null) {
     return <RevealBody view={view} />;
   }
   return <QuestionBody view={view} socket={socket} />;
 }
 
+/** Round pips: how far through the deck, at a glance. */
+function Pips({ index, total }: { index: number; total: number }) {
+  if (total <= 0 || total > 20) return null;
+  return (
+    <span className="pips" aria-hidden="true">
+      {Array.from({ length: total }, (_, i) => (
+        <span
+          key={i}
+          className={`pip${i < index ? " done" : i === index ? " now" : ""}`}
+        />
+      ))}
+    </span>
+  );
+}
+
+function RoundBar({ view, remaining }: { view: RoomView; remaining: number | null }) {
+  return (
+    <div className="roundbar">
+      <div>
+        <div className="label">
+          round {view.roundIndex + 1}
+          {view.questionCount > 0 && ` of ${view.questionCount}`}
+        </div>
+        <Pips index={view.roundIndex} total={view.questionCount} />
+      </div>
+      {remaining !== null && (
+        <TimerRing remaining={remaining} total={view.question?.seconds ?? null} />
+      )}
+    </div>
+  );
+}
+
+function IntroBody({ view }: { view: RoomView }) {
+  return (
+    <>
+      <div className="center intro">
+        <div className="label">get ready</div>
+        <div className="round">
+          Round {view.roundIndex + 1}
+          {view.questionCount > 0 && (
+            <span className="muted"> / {view.questionCount}</span>
+          )}
+        </div>
+      </div>
+      <Leaderboard view={view} />
+    </>
+  );
+}
+
 function QuestionBody({ view, socket }: Props) {
   const setPendingAnswer = useRoomStore((s) => s.setPendingAnswer);
-  const question = view.question!;
-  const seconds = useCountdown(question.endsAt, socket.clock);
+  const question = view.question;
+  const remaining = useCountdown(question?.endsAt ?? null, socket.clock);
+
+  if (question === null) return null;
+
   const me = view.players.find((p) => p.id === view.you);
   const spectating = me?.spectating ?? false;
-  const locked = question.yourAnswer !== null || view.pendingAnswer !== null;
-  const expired = seconds <= 0;
+  const chosen = question.yourAnswer ?? view.pendingAnswer;
+  const locked = chosen !== null;
+  const expired = remaining <= 0;
+  const canAnswer = !locked && !expired && !spectating;
 
   const pick = (optionId: number) => {
-    if (locked || expired || spectating) return;
+    if (!canAnswer) return;
     setPendingAnswer(optionId);
     socket.submitAnswer(question.roundSeq, optionId);
   };
 
-  const chosen = question.yourAnswer ?? view.pendingAnswer;
+  const status = spectating
+    ? "you join next round — watching this one"
+    : locked
+      ? "locked in"
+      : expired
+        ? "time!"
+        : "pick an answer";
 
   return (
-    <main>
-      <div className="question-head">
-        <span className="dim">
-          Q{question.roundIndex + 1}/{view.questionCount}
-        </span>
-        <span className={`timer${seconds <= 5 ? " low" : ""}`}>{Math.ceil(seconds)}</span>
-      </div>
+    <>
+      <RoundBar view={view} remaining={remaining} />
       <h2 className="prompt">{question.prompt}</h2>
-      <div className="options">
-        {question.options.map((o) => (
-          <button
-            key={o.id}
-            className={`option${chosen === o.id ? " picked" : ""}`}
-            disabled={locked || expired || spectating}
-            onClick={() => pick(o.id)}
-          >
-            {o.label}
-          </button>
+
+      <div className="tiles">
+        {question.options.map((option, index) => (
+          <AnswerTile
+            key={option.id}
+            index={index}
+            label={option.label}
+            state={chosen === option.id ? "picked" : "idle"}
+            disabled={!canAnswer}
+            onPick={() => pick(option.id)}
+          />
         ))}
       </div>
-      <p className="dim">
-        {spectating
-          ? "you join next round — spectating this one"
-          : locked
-            ? "locked in."
-            : expired
-              ? "time!"
-              : "pick an answer"}
-        {view.progress !== null &&
-          ` · ${view.progress.answered} of ${view.progress.total} answered`}
-      </p>
-    </main>
+
+      <div className="progress">
+        <AnswerProgress progress={view.progress} />
+        <span className="status" style={{ marginLeft: "auto" }}>
+          {status}
+        </span>
+      </div>
+
+      <Leaderboard view={view} />
+    </>
+  );
+}
+
+/** "4 of 6 locked in" — safe to show and good tension; it reveals who has
+ * answered, never what they answered (spec §05). */
+function AnswerProgress({ progress }: { progress: RoomView["progress"] }) {
+  if (progress === null) return null;
+  const { answered, total } = progress;
+  return (
+    <>
+      <span className="dots" aria-hidden="true">
+        {Array.from({ length: total }, (_, i) => (
+          <i key={i} className={i < answered ? "in" : ""} />
+        ))}
+      </span>
+      <span>
+        {answered} of {total} locked in
+      </span>
+    </>
   );
 }
 
 function RevealBody({ view }: { view: RoomView }) {
-  const question = view.question!;
-  const reveal = view.reveal!;
+  const question = view.question;
+  const reveal = view.reveal;
+  if (question === null || reveal === null) return null;
+
   const mine = reveal.results.find((r) => r.player_id === view.you);
+  const deltas = new Map(reveal.results.map((r) => [r.player_id, r.delta]));
+
+  const tileState = (optionId: number): TileState => {
+    if (optionId === reveal.correctOptionId) return "correct";
+    if (mine?.option_id === optionId) return "wrong";
+    return "faded";
+  };
 
   return (
-    <main>
+    <>
+      <RoundBar view={view} remaining={null} />
       <h2 className="prompt">{question.prompt}</h2>
-      <div className="options">
-        {question.options.map((o) => {
-          const isCorrect = o.id === reveal.correctOptionId;
-          const wasMine = mine?.option_id === o.id;
-          return (
-            <div
-              key={o.id}
-              className={`option static${isCorrect ? " correct" : wasMine ? " wrong" : ""}`}
-            >
-              {o.label}
-              {isCorrect && " ✓"}
-            </div>
-          );
-        })}
+
+      <div className="tiles">
+        {question.options.map((option, index) => (
+          <AnswerTile
+            key={option.id}
+            index={index}
+            label={option.label}
+            state={tileState(option.id)}
+            disabled
+            onPick={() => undefined}
+          />
+        ))}
       </div>
-      <ul className="deltas">
-        {reveal.results.map((r) => {
-          const name = view.players.find((p) => p.id === r.player_id)?.name ?? "?";
-          return (
-            <li key={r.player_id} className={r.correct ? "ok" : "dim"}>
-              {name}: {r.correct ? `+${r.delta}` : r.option_id === null ? "no answer" : "+0"}
-              {r.streak >= 3 && ` · streak ${r.streak}`}
-            </li>
-          );
-        })}
-      </ul>
-    </main>
+
+      <div className="progress">
+        <span className="status">
+          {mine === undefined
+            ? "round over"
+            : mine.correct
+              ? `correct — +${mine.delta}${mine.streak >= 3 ? ` · ${mine.streak} in a row` : ""}`
+              : mine.option_id === null
+                ? "no answer"
+                : "not this time"}
+        </span>
+      </div>
+
+      <Leaderboard view={view} deltas={deltas} />
+    </>
   );
 }

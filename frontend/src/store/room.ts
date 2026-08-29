@@ -112,7 +112,13 @@ function reduce(view: RoomView, frame: ServerFrame): RoomView {
               options: d.question.options,
               mediaRef: d.question.media_ref,
               endsAt: d.question.deadline,
-              seconds: null,
+              // The snapshot has no explicit round length, but it carries
+              // both ends of the window — without this the timer ring would
+              // render empty (and "urgent") after every reconnect.
+              seconds:
+                d.question.opened_at !== null && d.question.deadline !== null
+                  ? (d.question.deadline - d.question.opened_at) / 1000
+                  : null,
               yourAnswer: d.question.your_answer,
             }
           : null,

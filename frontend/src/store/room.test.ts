@@ -184,3 +184,30 @@ describe("round flow reductions", () => {
     expect(view.reveal).toBeNull();
   });
 });
+
+describe("snapshot resume", () => {
+  it("derives the round length so the timer ring survives a reconnect", () => {
+    const opened = Date.now();
+    const view = applyFrame(
+      initialView,
+      frame("snapshot", snapshotData({
+        phase: "QUESTION_OPEN",
+        round_seq: 3,
+        question: {
+          id: 7,
+          kind: "text",
+          prompt: "pick B",
+          options: [{ id: 0, label: "A" }, { id: 1, label: "B" }],
+          media_ref: null,
+          opened_at: opened,
+          deadline: opened + 20_000,
+          your_answer: 1,
+        },
+      }), 40),
+    );
+    // Without a duration the ring renders empty and urgent at full time.
+    expect(view.question?.seconds).toBe(20);
+    expect(view.question?.endsAt).toBe(opened + 20_000);
+    expect(view.question?.yourAnswer).toBe(1); // already answered before the drop
+  });
+});
