@@ -1,9 +1,7 @@
-# Local development database (M4). The api + web services join in M7;
-# production points at Neon and drops this entirely.
-#
-# Port 5433 on purpose: avoids colliding with any system postgres on 5432,
-# and matches the dev default DATABASE_URL baked into alembic.ini and
-# app/db/seed.py.
+# Local full stack: docker compose up  ->  game at http://localhost:8080
+# (dev with hot reload stays `uvicorn --reload` + `npm run dev`, no docker).
+# Production runs api behind Caddy on EC2 and points DATABASE_URL at Neon;
+# the web static half lives on Vercel and this db service disappears.
 services:
   db:
     image: postgres:16-alpine
@@ -20,6 +18,24 @@ services:
       interval: 5s
       timeout: 3s
       retries: 10
+
+  api:
+    build: ./backend
+    environment:
+      DATABASE_URL: postgresql+asyncpg://trivia:trivia@db:5432/trivia
+      SEED_ON_START: "1"
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  web:
+    build: ./frontend
+    ports:
+      - "8080:80"
+    depends_on:
+      - api
 
 volumes:
   dbdata:

@@ -85,3 +85,41 @@ jobs:
       - run: npm run lint
       - run: npm test
       - run: npm run build
+
+  images:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+
+      # A broken image should fail the PR, not the deploy.
+      - name: Build backend image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./backend
+          push: false
+          load: true
+          tags: anime-trivia-api:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build web image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./frontend
+          push: false
+          tags: anime-trivia-web:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # The container must actually come up and serve, not merely build.
+      - name: Smoke the backend image
+        run: |
+          docker run -d --name api -p 8000:8000 anime-trivia-api:ci
+          for i in $(seq 1 30); do
+            if curl -fs http://localhost:8000/api/health > /dev/null; then
+              echo "healthy"; curl -s http://localhost:8000/api/modes; exit 0
+            fi
+            sleep 1
+          done
+          echo "never became healthy"; docker logs api; exit 1

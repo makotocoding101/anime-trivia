@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 
+import { apiUrl } from "../net/base";
 import type { RoomSocket } from "../net/socket";
 import type { RoomView } from "../store/room";
 import { Leaderboard } from "./Leaderboard";
@@ -27,7 +28,7 @@ export function LobbyScreen({ view, socket }: Props) {
 
   useEffect(() => {
     let cancelled = false;
-    fetch("/api/modes")
+    fetch(apiUrl("/api/modes"))
       .then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))))
       .then((rows: Mode[]) => {
         if (cancelled) return;

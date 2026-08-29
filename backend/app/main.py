@@ -11,6 +11,7 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
 from app.api import rest, ws
 from app.config import assert_single_worker
@@ -68,6 +69,21 @@ def create_app(
                 await engine.dispose()
 
     app = FastAPI(title="anime-trivia", lifespan=lifespan)
+    # Same-origin setups (vite proxy, the compose Caddy) need no CORS at all.
+    # In production the static bundle lives on Vercel — a different origin —
+    # so the REST surface allows exactly the origins named in CORS_ORIGINS.
+    # (Browsers do not apply CORS to WebSocket upgrades; the socket needs no
+    # entry here.)
+    cors_origins = [
+        origin.strip() for origin in os.environ.get("CORS_ORIGINS", "").split(",") if origin.strip()
+    ]
+    if cors_origins:
+        app.add_middleware(
+            CORSMiddleware,
+            allow_origins=cors_origins,
+            allow_methods=["GET", "POST"],
+            allow_headers=["*"],
+        )
     app.include_router(rest.router)
     app.include_router(ws.router)
     return app

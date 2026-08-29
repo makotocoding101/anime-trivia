@@ -8,6 +8,8 @@
  */
 
 import type { ClientFrame, ServerFrame } from "../types/wire";
+
+import { apiUrl, wsUrl } from "./base";
 import { ServerClock } from "./clock";
 import { clearSession, defaultStorage, loadSession, saveSession } from "./session";
 
@@ -60,9 +62,8 @@ export class RoomSocket {
   }
 
   private open(status: SocketStatus): void {
-    const proto = location.protocol === "https:" ? "wss:" : "ws:";
     this.handlers.onStatus(status);
-    this.ws = new WebSocket(`${proto}//${location.host}/ws/rooms/${this.code}`);
+    this.ws = new WebSocket(wsUrl(`/ws/rooms/${this.code}`));
 
     this.ws.onopen = () => {
       this.attempt = 0;
@@ -150,7 +151,7 @@ export class RoomSocket {
 }
 
 export async function createRoom(): Promise<string> {
-  const response = await fetch("/api/rooms", { method: "POST" });
+  const response = await fetch(apiUrl("/api/rooms"), { method: "POST" });
   if (!response.ok) throw new Error(`room creation failed: ${response.status}`);
   const body = (await response.json()) as { code: string };
   return body.code;

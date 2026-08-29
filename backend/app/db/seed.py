@@ -37,7 +37,9 @@ class SeedImportError(SystemExit):
         super().__init__(f"seed import failed: {message}")
 
 
-async def import_seed(engine: AsyncEngine, replace: bool = False) -> dict[str, int]:
+async def import_seed(
+    engine: AsyncEngine, replace: bool = False, if_empty: bool = False
+) -> dict[str, int]:
     raw_questions = json.loads((SEED_DIR / "questions.json").read_text(encoding="utf-8"))
     raw_modes = json.loads((SEED_DIR / "modes.json").read_text(encoding="utf-8"))
     # Same validation as the file-backed game path; raises SeedError on junk.
@@ -46,6 +48,8 @@ async def import_seed(engine: AsyncEngine, replace: bool = False) -> dict[str, i
     session_factory = async_sessionmaker(engine, expire_on_commit=False)
     async with session_factory() as session, session.begin():
         existing = await session.scalar(select(func.count(Question.id)))
+        if existing and if_empty:
+            return {"skipped": existing}  # already seeded; boot-time no-op
         if existing and not replace:
             raise SeedImportError(
                 f"database already holds {existing} questions; rerun with --replace "
@@ -178,13 +182,18 @@ async def check_mode_margins(engine: AsyncEngine) -> None:
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--replace", action="store_true")
+    parser.add_argument(
+        "--if-empty",
+        action="store_true",
+        help="exit quietly if questions already exist (boot-time idempotence)",
+    )
     args = parser.parse_args()
     url = os.environ.get("DATABASE_URL", "postgresql+asyncpg://trivia:trivia@localhost:5433/trivia")
 
     async def run() -> None:
         engine = make_engine(url)
         try:
-            counts = await import_seed(engine, replace=args.replace)
+            counts = await import_seed(engine, replace=args.replace, if_empty=args.if_empty)
         finally:
             await engine.dispose()
         print(f"seeded: {counts}", file=sys.stderr)
