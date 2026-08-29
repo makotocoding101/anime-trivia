@@ -14,6 +14,7 @@ import uuid
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
+from app.api.auth import mint_token, verify_token
 from app.game.errors import GameError
 from app.game.events import (
     Command,
@@ -21,6 +22,7 @@ from app.game.events import (
     Join,
     Kick,
     Leave,
+    ReconnectPlayer,
     Rematch,
     SetReady,
     StartGame,
@@ -44,6 +46,7 @@ from app.schemas.wire import (
     error_frame,
     parse_client_frame,
     pong_frame,
+    session_frame,
 )
 from app.store import GameStore
 
@@ -77,15 +80,32 @@ async def ws_room(websocket: WebSocket) -> None:
         await websocket.close(code=4400, reason="join_first")
         return
 
-    player_id: PlayerId = str(uuid.uuid4())
+    secret: str = websocket.app.state.session_secret
+    resuming = first.token is not None
+    if first.token is not None:
+        verified = verify_token(first.token, secret)
+        if verified is None:
+            # Signature does not check out: possession of a player_id from a
+            # scoreboard payload is not a credential (R-14).
+            await websocket.send_text(error_frame("bad_token"))
+            await websocket.close(code=4401, reason="bad_token")
+            return
+        player_id: PlayerId = verified
+    else:
+        player_id = str(uuid.uuid4())
+
     conn = Connection(player_id, websocket)
     try:
-        room.attach(conn)
+        room.attach(conn)  # a takeover replaces any zombie socket for this id
     except RoomClosed:
         await websocket.send_text(error_frame("room_not_found"))
         await websocket.close(code=4404, reason="room_not_found")
         return
-    room.inbox.put_nowait(Join(player_id=player_id, name=first.name.strip()))
+    if resuming:
+        room.inbox.put_nowait(ReconnectPlayer(player_id=player_id))
+    else:
+        conn.try_send(session_frame(player_id, mint_token(player_id, secret), room.state.seq))
+        room.inbox.put_nowait(Join(player_id=player_id, name=first.name.strip()))
 
     try:
         while True:
@@ -106,8 +126,12 @@ async def ws_room(websocket: WebSocket) -> None:
     except WebSocketDisconnect:
         pass
     finally:
+        # Only the ACTIVE socket for this player reports a drop: after a
+        # takeover, this handler's conn has already been replaced, and its
+        # teardown must not mark the freshly resumed player as DROPPED.
+        was_active = room.conns.get(player_id) is conn
         await room.detach(conn)
-        if not room.stopped:
+        if was_active and not room.stopped:
             # The domain decides what a vanished socket means (DROPPED, held
             # seat, reconnect grace) — this layer only reports it.
             room.inbox.put_nowait(Disconnect(player_id=player_id))

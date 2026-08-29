@@ -1,18 +1,40 @@
 /**
  * The room socket: joins, pumps frames to the store, runs the clock
- * handshake. Pongs are consumed here — they calibrate the ServerClock and
- * never reach the reducer.
- *
- * Reconnect-with-resume arrives in M5 (it needs the signed token); for now a
- * dead socket surfaces as status "closed" and the user rejoins.
+ * handshake, and — from M5 — survives its own death. On an unexpected
+ * close it reconnects with exponential backoff and full jitter, presenting
+ * the stored resume token so the server reattaches the same seat and sends
+ * a fresh snapshot (§08, R-11). Pongs and session frames are consumed here;
+ * neither reaches the reducer.
  */
 
 import type { ClientFrame, ServerFrame } from "../types/wire";
 import { ServerClock } from "./clock";
+import { clearSession, defaultStorage, loadSession, saveSession } from "./session";
 
-export type SocketStatus = "connecting" | "open" | "closed";
+export type SocketStatus = "connecting" | "open" | "reconnecting" | "closed";
 
 const HANDSHAKE_PINGS = 3;
+
+/** Close codes that mean "do not come back": left, kicked, no such room,
+ * room swept. Everything else is presumed transient and retried. */
+const FATAL_CLOSE_CODES = new Set([4000, 4002, 4404, 4004]);
+
+/** Close reasons that mean the stored token is dead — clear it and the next
+ * attempt joins fresh (new seat) instead of retrying a doomed resume. */
+const TOKEN_REJECTIONS = new Set(["bad_token", "seat_expired", "unknown_player"]);
+
+const BACKOFF_BASE_MS = 500;
+const BACKOFF_CAP_MS = 10_000;
+
+/**
+ * Full jitter over an exponentially growing cap. The jitter is the point:
+ * after a server restart every client in every room retries at once, and
+ * the synchronized stampede is what actually takes a service down (§08).
+ */
+export function backoffDelayMs(attempt: number, rand: () => number = Math.random): number {
+  const cap = Math.min(BACKOFF_BASE_MS * 2 ** attempt, BACKOFF_CAP_MS);
+  return rand() * cap;
+}
 
 export interface RoomSocketHandlers {
   onFrame: (frame: ServerFrame) => void;
@@ -23,6 +45,9 @@ export class RoomSocket {
   readonly clock = new ServerClock();
   private ws: WebSocket | null = null;
   private closedByUs = false;
+  private attempt = 0;
+  private retryTimer: ReturnType<typeof setTimeout> | null = null;
+  private storage = defaultStorage();
 
   constructor(
     private readonly code: string,
@@ -31,14 +56,25 @@ export class RoomSocket {
   ) {}
 
   connect(): void {
+    this.open("connecting");
+  }
+
+  private open(status: SocketStatus): void {
     const proto = location.protocol === "https:" ? "wss:" : "ws:";
-    this.handlers.onStatus("connecting");
+    this.handlers.onStatus(status);
     this.ws = new WebSocket(`${proto}//${location.host}/ws/rooms/${this.code}`);
 
     this.ws.onopen = () => {
-      this.send({ type: "join", name: this.name });
+      this.attempt = 0;
+      const saved = loadSession(this.storage, this.code);
+      this.send(
+        saved !== null
+          ? { type: "join", name: this.name, token: saved.token }
+          : { type: "join", name: this.name },
+      );
       for (let i = 0; i < HANDSHAKE_PINGS; i++) {
-        // Slightly staggered so the samples see independent network moments.
+        // Staggered so the samples see independent network moments; rerun on
+        // every (re)connect since the offset may have changed with the path.
         setTimeout(() => this.send({ type: "ping", t0: Date.now() }), i * 120);
       }
       this.handlers.onStatus("open");
@@ -50,12 +86,42 @@ export class RoomSocket {
         this.clock.onPong(frame.data.t0, frame.data.ts);
         return;
       }
+      if (frame.type === "session") {
+        saveSession(this.storage, this.code, {
+          playerId: frame.data.player_id,
+          token: frame.data.resume_token,
+          name: this.name,
+        });
+        return;
+      }
       this.handlers.onFrame(frame);
     };
 
-    this.ws.onclose = () => {
-      if (!this.closedByUs) this.handlers.onStatus("closed");
+    this.ws.onclose = (event: CloseEvent) => {
+      if (this.closedByUs) return;
+      if (TOKEN_REJECTIONS.has(event.reason)) {
+        clearSession(this.storage, this.code); // next attempt joins fresh
+      }
+      if (FATAL_CLOSE_CODES.has(event.code)) {
+        this.handlers.onStatus("closed");
+        return;
+      }
+      this.scheduleReconnect();
     };
+  }
+
+  private scheduleReconnect(): void {
+    this.handlers.onStatus("reconnecting");
+    this.retryTimer = setTimeout(
+      () => this.open("reconnecting"),
+      backoffDelayMs(this.attempt++),
+    );
+  }
+
+  /** R-11's "on a gap, ask for a snapshot": with resume tokens, reconnecting
+   * IS asking. Bouncing the socket triggers the resume path. */
+  resync(): void {
+    this.ws?.close();
   }
 
   send(frame: ClientFrame): void {
@@ -74,8 +140,11 @@ export class RoomSocket {
     });
   }
 
+  /** Deliberate exit: no retry, and the seat's session is forgotten. */
   close(): void {
     this.closedByUs = true;
+    if (this.retryTimer !== null) clearTimeout(this.retryTimer);
+    clearSession(this.storage, this.code);
     this.ws?.close();
   }
 }

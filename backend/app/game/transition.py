@@ -138,7 +138,11 @@ def _on_reconnect(state: RoomState, cmd: ReconnectPlayer) -> list[Event]:
     if player.conn is ConnState.GONE:
         raise GameError("seat_expired")  # rejoin as a new player instead
     if player.conn is ConnState.LIVE:
-        raise GameError("already_connected")
+        # Socket takeover: a phone that switched networks reconnects before
+        # the server notices the old socket is dead. The connection layer has
+        # already replaced the socket; the seat never looked dropped, so no
+        # PlayerReconnected broadcast — just the resync snapshot (R-11).
+        return [Snapshot(to=player.id, view=public_view(state, player.id))]
 
     player.conn = ConnState.LIVE
     player.dropped_at = None

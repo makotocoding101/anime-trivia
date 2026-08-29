@@ -28,6 +28,8 @@ from app.game.events import (
     GameOver,
     IntroElapsed,
     PlayerLeft,
+    ReapPlayer,
+    ReconnectPlayer,
     RevealElapsed,
     StartGame,
 )
@@ -42,6 +44,10 @@ logger = logging.getLogger(__name__)
 EMPTY_ROOM_TTL_S = 300.0
 """How long a room may sit with zero connections before the sweep reaps it —
 covers both freshly created rooms nobody joined and abandoned games."""
+
+RECONNECT_GRACE_S = 60.0
+"""How long a DROPPED player's seat is held before the reaper frees it (§08).
+Injectable per room so integration tests do not wait a minute."""
 
 # Which command a phase's timeout enqueues. The timer never mutates state; it
 # is just another sender on the inbox (invariant 1).
@@ -86,6 +92,7 @@ class Room:
         clock: Clock,
         on_stopped: Callable[[Room], None] | None = None,
         store: GameStore | None = None,
+        reconnect_grace_s: float = RECONNECT_GRACE_S,
     ) -> None:
         self.code = code
         self.clock = clock
@@ -99,8 +106,10 @@ class Room:
         self._task: asyncio.Task[None] | None = None
         self._sweeper: asyncio.Task[None] | None = None
         self._store = store
+        self.reconnect_grace_s = reconnect_grace_s
         self._game_meta: _GameMeta | None = None
         self._persist_tasks: set[asyncio.Task[None]] = set()
+        self._reaper_tasks: set[asyncio.Task[None]] = set()
         self._epoch = 0  # bumped on every attach; fences _SweepCheck
 
     # ------------------------------------------------------------------
@@ -123,6 +132,14 @@ class Room:
                 try:
                     events = transition(self.state, cmd, self.clock.now())
                 except GameError as exc:
+                    if isinstance(cmd, ReconnectPlayer):
+                        # A rejected resume leaves a socket with no seat; close
+                        # it with the code as the reason — the client clears
+                        # its token and rejoins fresh on that signal.
+                        conn = self.conns.pop(cmd.player_id, None)
+                        if conn is not None:
+                            conn.close_soon(exc.code)
+                        continue
                     events = _rejection(cmd, exc)
                 except Exception:
                     # A domain bug must not kill the room for everyone (§05's
@@ -139,6 +156,7 @@ class Room:
                     )
                 self._dispatch(events)
                 self._close_departed(events)
+                self._schedule_reapers(events)
                 self._maybe_persist(events)
                 self._reschedule_timer()
         finally:
@@ -218,6 +236,29 @@ class Room:
                     conn.close_soon(event.reason)
                     if not self.conns and not self.stopped:
                         self._schedule_sweep()
+
+    def _schedule_reapers(self, events: list[Event]) -> None:
+        """Every drop gets a fenced wake-up: sleep out the grace, then ask the
+        domain to reap. The fence is dropped_at — a reconnect (or a reconnect
+        plus a fresh drop) makes this task's value stale and the domain
+        no-ops it (§08, same pattern as R-03)."""
+        for event in events:
+            if not (isinstance(event, PlayerLeft) and event.reason == "dropped"):
+                continue
+            player = self.state.players.get(event.player_id)
+            if player is None or player.dropped_at is None:
+                continue
+            task = asyncio.create_task(
+                self._reap_later(event.player_id, player.dropped_at),
+                name=f"reaper:{self.code}:{event.player_id}",
+            )
+            self._reaper_tasks.add(task)
+            task.add_done_callback(self._reaper_tasks.discard)
+
+    async def _reap_later(self, player_id: PlayerId, dropped_at: float) -> None:
+        await self.clock.sleep_until(dropped_at + self.reconnect_grace_s)
+        if not self.stopped:
+            self.inbox.put_nowait(ReapPlayer(player_id=player_id, dropped_at=dropped_at))
 
     def _reschedule_timer(self) -> None:
         if self._timer is not None:

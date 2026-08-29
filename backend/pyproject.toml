@@ -21,6 +21,7 @@ dev = [
     "mypy>=1.11",
     "pytest-asyncio>=1.4.0",
     "httpx2>=2.12.0",
+    "pytest-timeout>=2.4.0",
 ]
 
 [tool.uv]
@@ -33,6 +34,8 @@ testpaths = ["tests"]
 pythonpath = ["."]
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
+timeout = 60
+timeout_method = "thread"
 markers = ["db: requires a reachable postgres (TRIVIA_TEST_DATABASE_URL)"]
 
 [tool.ruff]

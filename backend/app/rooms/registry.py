@@ -14,7 +14,7 @@ from typing import Protocol
 from app.game.clock import Clock
 from app.game.errors import GameError
 from app.game.events import Command
-from app.rooms.room import Room
+from app.rooms.room import RECONNECT_GRACE_S, Room
 from app.store import GameStore
 
 # No vowels, so the generator cannot spell words players have to read aloud
@@ -33,9 +33,15 @@ class InProcessRegistry:
     until M4 makes creation await the database — the placeholder-future
     pattern lands there, behind this same interface)."""
 
-    def __init__(self, clock: Clock, store: GameStore | None = None) -> None:
+    def __init__(
+        self,
+        clock: Clock,
+        store: GameStore | None = None,
+        reconnect_grace_s: float = RECONNECT_GRACE_S,
+    ) -> None:
         self._clock = clock
         self._store = store
+        self._reconnect_grace_s = reconnect_grace_s
         self._rooms: dict[str, Room] = {}
 
     def create_room(self) -> Room:
@@ -62,7 +68,13 @@ class InProcessRegistry:
         room.inbox.put_nowait(cmd)
 
     def _start_room(self, code: str) -> Room:
-        room = Room(code, self._clock, on_stopped=self._forget, store=self._store)
+        room = Room(
+            code,
+            self._clock,
+            on_stopped=self._forget,
+            store=self._store,
+            reconnect_grace_s=self._reconnect_grace_s,
+        )
         self._rooms[code] = room
         room.start()
         return room

@@ -5,6 +5,7 @@ across processes, so we refuse to boot instead."""
 from __future__ import annotations
 
 import os
+import secrets
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -26,6 +27,7 @@ def create_app(
     clock: Clock | None = None,
     game_config: GameConfig | None = None,
     database_url: str | None = None,
+    reconnect_grace_s: float | None = None,
 ) -> FastAPI:
     """`clock` and `game_config` are injection points for tests. The store is
     chosen by `database_url` (default: the DATABASE_URL env var): Postgres
@@ -46,8 +48,15 @@ def create_app(
         else:
             engine = None
             store = SeedStore(load_questions(SEED_PATH), base_config)
+        # Random per process when unset: restarts invalidate resume tokens,
+        # which is fine — a restart ends in-flight games anyway (§01).
+        app.state.session_secret = os.environ.get("SESSION_SECRET") or secrets.token_hex(32)
         app.state.store = store
-        registry = InProcessRegistry(clock or RealClock(), store=store)
+        registry = InProcessRegistry(
+            clock or RealClock(),
+            store=store,
+            **({"reconnect_grace_s": reconnect_grace_s} if reconnect_grace_s is not None else {}),
+        )
         app.state.registry = registry
         try:
             yield

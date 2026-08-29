@@ -55,6 +55,7 @@ class _Frame(BaseModel):
 class JoinFrame(_Frame):
     type: Literal["join"]
     name: str = Field(min_length=1, max_length=24)
+    token: str | None = Field(default=None, max_length=128)  # resume credential (§08)
 
 
 class StartGameFrame(_Frame):
@@ -143,7 +144,7 @@ def parse_client_frame(raw: str) -> ClientFrame:
 # Server -> client encoding
 # --------------------------------------------------------------------------
 
-TARGETED_TYPES = frozenset({"snapshot", "answer_ack", "error"})
+TARGETED_TYPES = frozenset({"snapshot", "answer_ack", "error", "session"})
 """Frame types exempt from the client's dense-seq gap detection."""
 
 
@@ -156,6 +157,21 @@ def error_frame(code: str, seq: int = 0, cid: str | None = None) -> str:
             "type": "error",
             "ts": int(time.time() * 1000),
             "data": {"code": code, "cid": cid},
+        }
+    )
+
+
+def session_frame(player_id: str, token: str, seq: int) -> str:
+    """Sent once, right after a fresh join: the identity the client stores
+    and the credential it resumes with (R-14). Boundary-generated, like pong —
+    the domain never sees tokens."""
+    return json.dumps(
+        {
+            "v": 1,
+            "seq": seq,
+            "type": "session",
+            "ts": int(time.time() * 1000),
+            "data": {"player_id": player_id, "resume_token": token},
         }
     )
 

@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import { GameOverScreen } from "./components/GameOverScreen";
 import { GameScreen } from "./components/GameScreen";
@@ -14,6 +14,13 @@ export function App() {
   const clearError = useRoomStore((s) => s.clearError);
 
   const socketRef = useRef<RoomSocket | null>(null);
+  const needsResync = view.needsResync;
+
+  // R-11's gap rule: a hole in the broadcast stream means this connection is
+  // suspect; bounce it and resume — the snapshot re-baselines everything.
+  useEffect(() => {
+    if (needsResync) socketRef.current?.resync();
+  }, [needsResync]);
   const [status, setStatus] = useState<SocketStatus | "idle">("idle");
   const [joinError, setJoinError] = useState<string | null>(null);
 
@@ -59,7 +66,7 @@ export function App() {
         onJoin={enterRoom}
         onCreate={handleCreate}
         connecting={status === "connecting"}
-        error={joinError ?? (status === "closed" ? "connection lost — rejoin below" : null)}
+        error={joinError ?? (status === "closed" ? "disconnected from the room — rejoin below" : null)}
       />
     );
   }
@@ -68,7 +75,9 @@ export function App() {
     <div className="shell">
       <header className="bar">
         <span className="code">room {view.roomCode}</span>
-        <span className={`conn conn-${status}`}>{status}</span>
+        <span className={`conn conn-${status}`}>
+          {status === "reconnecting" ? "reconnecting…" : status}
+        </span>
         <button className="ghost" onClick={leave}>
           leave
         </button>

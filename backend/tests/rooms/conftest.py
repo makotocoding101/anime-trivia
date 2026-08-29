@@ -57,11 +57,14 @@ class Harness:
         self.clock.advance(dt)
         await self.settle()
 
-    async def connect(self, pid: str, wedge: bool = False, outbox_size: int = 64) -> StubSocket:
+    async def connect(
+        self, pid: str, wedge: bool = False, outbox_size: int = 64, join: bool = True
+    ) -> StubSocket:
         socket = StubSocket(wedge=wedge)
         conn = Connection(pid, socket, outbox_size=outbox_size)
         self.room.attach(conn)
-        self.room.inbox.put_nowait(Join(player_id=pid, name=pid))
+        if join:
+            self.room.inbox.put_nowait(Join(player_id=pid, name=pid))
         self.sockets[pid] = socket
         await self.settle()
         return socket

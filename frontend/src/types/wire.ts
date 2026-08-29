@@ -128,6 +128,7 @@ export type ServerFrame = FrameBase &
     | { type: "host_changed"; data: { player_id: string } }
     | { type: "game_over"; data: { standings: ScoreRow[] } }
     | { type: "error"; data: { code: string; cid: string | null } }
+    | { type: "session"; data: { player_id: string; resume_token: string } }
     | { type: "pong"; data: { t0: number; ts: number } }
   );
 
@@ -138,11 +139,12 @@ export const TARGETED_TYPES: ReadonlySet<string> = new Set([
   "snapshot",
   "answer_ack",
   "error",
+  "session",
   "pong",
 ]);
 
 export type ClientFrame =
-  | { type: "join"; name: string }
+  | { type: "join"; name: string; token?: string }
   | { type: "start_game"; mode_id: number }
   | { type: "submit_answer"; round_seq: number; option_id: number; cid?: string }
   | { type: "set_ready"; ready: boolean }

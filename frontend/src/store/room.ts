@@ -271,8 +271,9 @@ function reduce(view: RoomView, frame: ServerFrame): RoomView {
     case "error":
       return { ...view, lastError: frame.data.code, pendingAnswer: null };
 
+    case "session":
     case "pong":
-      return view; // consumed by the clock layer before frames reach the store
+      return view; // consumed by the socket layer before frames reach the store
   }
 }
 

@@ -65,13 +65,20 @@ def test_reconnect_error_codes(open_room: Driver) -> None:
     with pytest.raises(GameError) as exc:
         open_room.do(ReconnectPlayer(player_id="ghost"))
     assert exc.value.code == "unknown_player"
-    with pytest.raises(GameError) as exc:
-        open_room.do(ReconnectPlayer(player_id="p1"))  # still LIVE
-    assert exc.value.code == "already_connected"
     open_room.do(Leave(player_id="p1"))
     with pytest.raises(GameError) as exc:
         open_room.do(ReconnectPlayer(player_id="p1"))  # GONE
     assert exc.value.code == "seat_expired"
+
+
+def test_reconnect_while_live_is_a_silent_takeover(open_room: Driver) -> None:
+    # The zombie-socket case: resume lands while the old socket still looks
+    # LIVE. No dropped state, no broadcast — just a fresh snapshot.
+    events = open_room.do(ReconnectPlayer(player_id="p1"))
+    snap = one_event(events, Snapshot)
+    assert snap.to == "p1"
+    assert events_of(events, PlayerReconnected) == []
+    assert open_room.state.players["p1"].conn is ConnState.LIVE
 
 
 def test_dropped_player_excluded_from_all_answered(open_room: Driver) -> None:  # §08

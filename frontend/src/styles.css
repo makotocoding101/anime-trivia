@@ -51,6 +51,7 @@ label { display: flex; flex-direction: column; gap: 6px; color: var(--dim); }
 .code { font-family: ui-monospace, monospace; letter-spacing: 0.1em; }
 .conn { margin-left: auto; font-size: 12px; color: var(--dim); }
 .conn-closed { color: var(--bad); }
+.conn-reconnecting { color: var(--accent); }
 .toast { background: #3a2a20; border: 1px solid var(--accent); border-radius: 6px; padding: 8px 12px; margin-bottom: 14px; cursor: pointer; }
 
 .join-row { display: flex; align-items: center; gap: 10px; }
