@@ -249,6 +249,16 @@ class HostChanged:
 
 
 @dataclass(slots=True)
+class Error:
+    """A rejected command, bounced back to its sender only. Emitted by the
+    room layer when transition() raises GameError — never broadcast."""
+
+    to: PlayerId
+    code: str
+    cid: str | None = None
+
+
+@dataclass(slots=True)
 class GameOver:
     standings: list[ScoreboardRow] = field(default_factory=list)
 
@@ -267,4 +277,5 @@ type Event = (
     | PlayerReadyChanged
     | HostChanged
     | GameOver
+    | Error
 )
