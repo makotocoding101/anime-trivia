@@ -1,0 +1,20 @@
+# python
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# node (frontend, later milestones)
+node_modules/
+dist/
+
+# env & editors
+.env
+.env.*
+!.env.example
+.idea/
+.vscode/
