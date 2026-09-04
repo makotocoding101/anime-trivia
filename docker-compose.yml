@@ -1,6 +1,6 @@
 # Local full stack: docker compose up  ->  game at http://localhost:8080
 # (dev with hot reload stays `uvicorn --reload` + `npm run dev`, no docker).
-# Production runs api behind Caddy on EC2 and points DATABASE_URL at Neon;
+# Production runs api behind Caddy on EC2 and points DATABASE_URL at RDS;
 # the web static half lives on Vercel and this db service disappears.
 services:
   db:

@@ -1,6 +1,6 @@
 """Async alembic environment. The URL comes from DATABASE_URL when set, so
 the same migrations run against local dev postgres, the CI service container,
-and Neon."""
+and RDS."""
 
 from __future__ import annotations
 
