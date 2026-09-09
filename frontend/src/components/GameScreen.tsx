@@ -51,6 +51,22 @@ function RoundBar({ view, remaining }: { view: RoomView; remaining: number | nul
   );
 }
 
+/**
+ * The scoreboard as its own panel. On a wide screen the stage puts it beside
+ * the question rather than under it, so an overtake is visible in the moment
+ * it happens instead of after a scroll.
+ */
+function ScorePanel({ view, deltas }: { view: RoomView; deltas?: Map<string, number> }) {
+  return (
+    <div className="panel">
+      <div className="panel-head">
+        <span className="label">🏆 scoreboard</span>
+      </div>
+      <Leaderboard view={view} deltas={deltas} />
+    </div>
+  );
+}
+
 function IntroBody({ view }: { view: RoomView }) {
   return (
     <>
@@ -58,12 +74,10 @@ function IntroBody({ view }: { view: RoomView }) {
         <div className="label">get ready</div>
         <div className="round">
           Round {view.roundIndex + 1}
-          {view.questionCount > 0 && (
-            <span className="muted"> / {view.questionCount}</span>
-          )}
+          {view.questionCount > 0 && <span> / {view.questionCount}</span>}
         </div>
       </div>
-      <Leaderboard view={view} />
+      <ScorePanel view={view} />
     </>
   );
 }
@@ -97,32 +111,37 @@ function QuestionBody({ view, socket }: Props) {
         : "pick an answer";
 
   return (
-    <>
-      <RoundBar view={view} remaining={remaining} />
-      <h2 className="prompt">{question.prompt}</h2>
+    <div className="stage">
+      <div className="stack">
+        <RoundBar view={view} remaining={remaining} />
 
-      <div className="tiles">
-        {question.options.map((option, index) => (
-          <AnswerTile
-            key={option.id}
-            index={index}
-            label={option.label}
-            state={chosen === option.id ? "picked" : "idle"}
-            disabled={!canAnswer}
-            onPick={() => pick(option.id)}
-          />
-        ))}
+        <div className="panel">
+          <h2 className="prompt">{question.prompt}</h2>
+
+          <div className="tiles">
+            {question.options.map((option, index) => (
+              <AnswerTile
+                key={option.id}
+                index={index}
+                label={option.label}
+                state={chosen === option.id ? "picked" : "idle"}
+                disabled={!canAnswer}
+                onPick={() => pick(option.id)}
+              />
+            ))}
+          </div>
+
+          <div className="progress">
+            <AnswerProgress progress={view.progress} />
+            <span className="status" style={{ marginLeft: "auto" }}>
+              {status}
+            </span>
+          </div>
+        </div>
       </div>
 
-      <div className="progress">
-        <AnswerProgress progress={view.progress} />
-        <span className="status" style={{ marginLeft: "auto" }}>
-          {status}
-        </span>
-      </div>
-
-      <Leaderboard view={view} />
-    </>
+      <ScorePanel view={view} />
+    </div>
   );
 }
 
@@ -160,36 +179,41 @@ function RevealBody({ view }: { view: RoomView }) {
   };
 
   return (
-    <>
-      <RoundBar view={view} remaining={null} />
-      <h2 className="prompt">{question.prompt}</h2>
+    <div className="stage">
+      <div className="stack">
+        <RoundBar view={view} remaining={null} />
 
-      <div className="tiles">
-        {question.options.map((option, index) => (
-          <AnswerTile
-            key={option.id}
-            index={index}
-            label={option.label}
-            state={tileState(option.id)}
-            disabled
-            onPick={() => undefined}
-          />
-        ))}
+        <div className="panel">
+          <h2 className="prompt">{question.prompt}</h2>
+
+          <div className="tiles">
+            {question.options.map((option, index) => (
+              <AnswerTile
+                key={option.id}
+                index={index}
+                label={option.label}
+                state={tileState(option.id)}
+                disabled
+                onPick={() => undefined}
+              />
+            ))}
+          </div>
+
+          <div className="progress">
+            <span className="status">
+              {mine === undefined
+                ? "round over"
+                : mine.correct
+                  ? `correct — +${mine.delta}${mine.streak >= 3 ? ` · ${mine.streak} in a row` : ""}`
+                  : mine.option_id === null
+                    ? "no answer"
+                    : "not this time"}
+            </span>
+          </div>
+        </div>
       </div>
 
-      <div className="progress">
-        <span className="status">
-          {mine === undefined
-            ? "round over"
-            : mine.correct
-              ? `correct — +${mine.delta}${mine.streak >= 3 ? ` · ${mine.streak} in a row` : ""}`
-              : mine.option_id === null
-                ? "no answer"
-                : "not this time"}
-        </span>
-      </div>
-
-      <Leaderboard view={view} deltas={deltas} />
-    </>
+      <ScorePanel view={view} deltas={deltas} />
+    </div>
   );
 }

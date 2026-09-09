@@ -1,53 +1,77 @@
 /* ===========================================================================
-   Kagen — design system
+   OtaKizu — design system
    ---------------------------------------------------------------------------
    Deliberately single-theme. Trivia is played in a lit room with a phone in
-   hand, and the design leans on that: a deep ground so the timer ring and the
-   answer tiles are the two bright objects on screen (spec §09). Every colour
-   is painted explicitly rather than inherited.
+   hand, and the design leans on that: a deep violet ground with one broad
+   glow behind it, so the timer ring and the answer tiles are the two bright
+   objects on screen (spec §09). Every colour is painted explicitly rather
+   than inherited.
 
-   One accent (violet) carries brand and interaction. Semantic colour —
-   correct / wrong / urgent — is a separate set and never doubles as the
-   accent, so "this is selectable" and "this is right" cannot be confused.
+   Three colour roles, kept apart on purpose:
+
+     accent   violet → pink. Brand, selection, "this is interactive".
+     value    gold. Score, rank, the things you accumulate. Never a state.
+     semantic green / rose / orange. Correct, wrong, running out.
+
+   Gold and orange are close on the wheel and easy to conflate, so they are
+   separated by saturation and role and never appear in the same component:
+   gold says "this is worth points", orange says "the clock is going".
+
+   Surfaces are translucent white over the painted body gradient rather than
+   opaque greys, which is what gives the panels their glass edge — but it
+   means nothing may assume an opaque parent.
    =========================================================================== */
 
 :root {
   color-scheme: dark;
 
-  /* --- ground → raised ------------------------------------------------- */
-  --bg: #0b0e14;
-  --bg-elev: #141924;
-  --bg-raised: #1c2231;
-  --bg-hover: #232a3b;
+  /* --- ground ----------------------------------------------------------- */
+  --bg: #0b0820;
+  --bg-deep: #07051a;
+  --glow-core: rgb(112 74 205 / 0.55);
+  --glow-low: rgb(160 96 220 / 0.22);
 
-  --line: #262e40;
-  --line-strong: #3a445c;
+  /* --- surfaces (translucent — see header note) -------------------------- */
+  --surface: rgb(255 255 255 / 0.045);
+  --surface-2: rgb(255 255 255 / 0.075);
+  --surface-hover: rgb(255 255 255 / 0.1);
+  --surface-solid: #171233; /* only where translucency would stack badly */
 
-  /* --- ink ------------------------------------------------------------- */
-  --ink: #e9edf6;
-  --ink-2: #b4bdd0;
-  --ink-3: #7c8699;
+  --line: rgb(255 255 255 / 0.09);
+  --line-strong: rgb(255 255 255 / 0.2);
 
-  /* --- accent (brand + interaction) ------------------------------------ */
-  --accent: #8b7cff;
-  --accent-bright: #a396ff;
-  --accent-soft: #211d43;
-  --on-accent: #0b0e14;
+  /* --- ink -------------------------------------------------------------- */
+  --ink: #efecff;
+  --ink-2: #b9b1e0;
+  --ink-3: #8b83b8;
 
-  /* --- semantic (never used as accent) --------------------------------- */
-  --good: #3dd68c;
-  --good-soft: #102d21;
-  --bad: #ff6b6b;
-  --bad-soft: #2f1a1d;
-  --warn: #ffb340;
-  --warn-soft: #2e2312;
+  /* --- accent (brand + interaction) ------------------------------------- */
+  --accent: #a78bfa;
+  --accent-bright: #c4b5fd;
+  --accent-2: #f472b6;
+  --accent-soft: rgb(167 139 250 / 0.16);
+  --on-accent: #17102e;
 
-  /* --- type ------------------------------------------------------------ */
-  --font-display: "Outfit", "Segoe UI", system-ui, sans-serif;
-  --font-ui: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
-  --font-mono: "IBM Plex Mono", ui-monospace, "Cascadia Mono", monospace;
+  /* --- value (score, rank) ---------------------------------------------- */
+  --gold: #fbbf24;
+  --gold-soft: rgb(251 191 36 / 0.13);
+  --silver: #cbd5e1;
+  --bronze: #d59a6a;
 
-  /* --- space (4px base) ------------------------------------------------ */
+  /* --- semantic (never used as accent) ---------------------------------- */
+  --good: #4ade80;
+  --good-soft: rgb(74 222 128 / 0.13);
+  --bad: #fb7185;
+  --bad-soft: rgb(251 113 133 / 0.14);
+  --warn: #ff9f45;
+  --warn-soft: rgb(255 159 69 / 0.14);
+
+  /* --- type ------------------------------------------------------------- */
+  --font-display: "Poppins", "Segoe UI", system-ui, sans-serif;
+  --font-ui: "Space Grotesk", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "Cascadia Mono", monospace;
+
+  /* --- space (4px base) ------------------------------------------------- */
   --s1: 4px;
   --s2: 8px;
   --s3: 12px;
@@ -57,11 +81,13 @@
   --s7: 48px;
   --s8: 72px;
 
-  --radius: 10px;
-  --radius-lg: 16px;
+  --radius: 12px;
+  --radius-lg: 18px;
+  --radius-xl: 24px;
   --radius-pill: 999px;
 
-  --ring-focus: 0 0 0 3px rgb(139 124 255 / 0.45);
+  --ring-focus: 0 0 0 3px rgb(167 139 250 / 0.5);
+  --lift: 0 18px 40px -24px rgb(0 0 0 / 0.9);
 }
 
 /* ---------------------------------------------------------------- base -- */
@@ -77,19 +103,27 @@ body {
 
 body {
   margin: 0;
-  background: var(--bg);
   color: var(--ink);
   font-family: var(--font-ui);
   font-size: 16px;
   line-height: 1.55;
   -webkit-font-smoothing: antialiased;
+
+  /* One broad glow behind everything, anchored to the viewport so scrolling
+     moves the content across the light rather than dragging the light along. */
+  background:
+    radial-gradient(1100px 760px at 50% 38%, var(--glow-core), transparent 68%),
+    radial-gradient(900px 620px at 50% 108%, var(--glow-low), transparent 70%),
+    linear-gradient(180deg, #100c2b 0%, var(--bg) 55%, var(--bg-deep) 100%);
+  background-attachment: fixed;
+  background-color: var(--bg-deep);
 }
 
 h1,
 h2,
 h3 {
   font-family: var(--font-display);
-  font-weight: 600;
+  font-weight: 700;
   letter-spacing: -0.02em;
   line-height: 1.15;
   margin: 0;
@@ -117,74 +151,111 @@ p {
   color: var(--ink-3);
 }
 
+/* Present to a screen reader, absent to everything else. */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* The wide-tracked uppercase micro-label the whole layout hangs on. */
 .label {
   font-family: var(--font-mono);
   font-size: 11px;
   font-weight: 500;
-  letter-spacing: 0.12em;
+  letter-spacing: 0.16em;
   text-transform: uppercase;
   color: var(--ink-3);
+}
+
+/* Violet → pink, the one gradient in the system. Anything wearing it is
+   brand: the wordmark, the winner, the primary action. */
+.grad {
+  background: linear-gradient(135deg, #cfd0ff 0%, var(--accent-bright) 45%, var(--accent-2) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
 }
 
 button {
   font: inherit;
   font-family: var(--font-ui);
   font-weight: 600;
+  letter-spacing: 0.01em;
   border: 1px solid transparent;
   border-radius: var(--radius);
-  padding: 11px 20px;
+  padding: 12px 22px;
   cursor: pointer;
-  background: var(--accent);
-  color: var(--on-accent);
+  color: #fff;
+  background: linear-gradient(135deg, var(--accent) 0%, var(--accent-2) 130%);
+  box-shadow: 0 10px 26px -14px rgb(167 139 250 / 0.9);
   transition:
+    filter 0.15s ease,
+    box-shadow 0.15s ease,
     background 0.15s ease,
     border-color 0.15s ease,
     color 0.15s ease,
     transform 0.08s ease;
 }
 button:hover:not(:disabled) {
-  background: var(--accent-bright);
+  filter: brightness(1.12);
+  box-shadow: 0 14px 30px -14px rgb(167 139 250 / 1);
 }
 button:active:not(:disabled) {
   transform: translateY(1px);
 }
 button:disabled {
-  opacity: 0.4;
+  opacity: 0.38;
+  box-shadow: none;
   cursor: not-allowed;
 }
 
 button.ghost {
-  background: transparent;
+  background: var(--surface);
   color: var(--ink-2);
   border-color: var(--line);
+  box-shadow: none;
 }
 button.ghost:hover:not(:disabled) {
-  background: var(--bg-hover);
+  background: var(--surface-hover);
   color: var(--ink);
   border-color: var(--line-strong);
+  filter: none;
 }
 button.ghost.on {
   border-color: var(--accent);
-  color: var(--accent);
+  color: var(--accent-bright);
   background: var(--accent-soft);
 }
 
 input {
   font: inherit;
   font-family: var(--font-ui);
-  background: var(--bg-elev);
+  background: rgb(0 0 0 / 0.22);
   color: var(--ink);
   border: 1px solid var(--line);
   border-radius: var(--radius);
-  padding: 12px 14px;
+  padding: 13px 15px;
   width: 100%;
-  transition: border-color 0.15s ease;
+  transition:
+    border-color 0.15s ease,
+    background 0.15s ease;
 }
 input::placeholder {
   color: var(--ink-3);
 }
 input:hover {
   border-color: var(--line-strong);
+}
+input:focus {
+  border-color: var(--accent);
+  background: rgb(0 0 0 / 0.3);
 }
 
 /* -------------------------------------------------------------- shell -- */
@@ -199,10 +270,32 @@ input:hover {
 
 .frame {
   width: 100%;
-  max-width: 680px;
+  max-width: 940px;
   display: flex;
   flex-direction: column;
   gap: var(--s5);
+}
+
+/* Two panels side by side once there is room, stacked before that. The
+   scoreboard is the thing that benefits: on a wide screen it never leaves
+   the screen, which is most of the tension in a live game. */
+.stage {
+  display: grid;
+  gap: var(--s4);
+  grid-template-columns: minmax(0, 1fr);
+  align-items: start;
+}
+@media (min-width: 880px) {
+  .stage {
+    grid-template-columns: minmax(0, 1.6fr) minmax(280px, 1fr);
+  }
+}
+
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s4);
+  min-width: 0;
 }
 
 /* ------------------------------------------------------------- header -- */
@@ -211,30 +304,31 @@ input:hover {
   display: flex;
   align-items: center;
   gap: var(--s3);
-  padding-bottom: var(--s4);
-  border-bottom: 1px solid var(--line);
+  flex-wrap: wrap;
+  padding: var(--s3) var(--s4);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  backdrop-filter: blur(12px);
 }
 
 .brand {
   font-family: var(--font-display);
-  font-weight: 700;
-  font-size: 17px;
-  letter-spacing: -0.02em;
-  color: var(--ink);
-}
-.brand span {
-  color: var(--accent);
+  font-weight: 800;
+  font-size: 19px;
+  letter-spacing: -0.01em;
 }
 
 .roomcode {
   font-family: var(--font-mono);
   font-size: 13px;
-  letter-spacing: 0.18em;
-  color: var(--ink-2);
-  background: var(--bg-elev);
-  border: 1px solid var(--line);
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  color: var(--ink);
+  background: var(--accent-soft);
+  border: 1px solid rgb(167 139 250 / 0.35);
   border-radius: var(--radius-pill);
-  padding: 4px 10px 4px 14px;
+  padding: 5px 10px 5px 15px;
 }
 
 .topbar .spacer {
@@ -242,8 +336,68 @@ input:hover {
 }
 
 .topbar button.ghost {
-  padding: 7px 14px;
+  padding: 8px 15px;
   font-size: 14px;
+}
+
+/* The reference's top-right coin pill. Gold is the value colour and this is
+   the only place a running total lives in the chrome. */
+.coin {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s2);
+  padding: 5px 14px 5px 11px;
+  border-radius: var(--radius-pill);
+  border: 1px solid rgb(251 191 36 / 0.45);
+  background: var(--gold-soft);
+  color: var(--gold);
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* "Welcome back, Player One" — the identity strip, on real data. */
+.whoami {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s3);
+  padding: 4px 4px 4px 5px;
+  border-radius: var(--radius-pill);
+  background: var(--surface);
+  border: 1px solid var(--line);
+}
+.whoami .face {
+  width: 30px;
+  height: 30px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  font-size: 16px;
+  line-height: 1;
+  border-radius: 9px;
+  background: linear-gradient(140deg, rgb(167 139 250 / 0.35), rgb(244 114 182 / 0.22));
+}
+.whoami .who {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.15;
+  padding-right: var(--s3);
+  min-width: 0;
+}
+.whoami .who b {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 14px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 15ch;
+}
+.whoami .who .label {
+  font-size: 9px;
+  letter-spacing: 0.18em;
 }
 
 /* --------------------------------------------------- connection dot ---- */
@@ -252,9 +406,16 @@ input:hover {
   display: inline-flex;
   align-items: center;
   gap: var(--s2);
-  font-size: 13px;
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
   color: var(--ink-3);
   white-space: nowrap;
+  padding: 5px 12px 5px 10px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--line);
+  background: var(--surface);
 }
 .conn i {
   width: 7px;
@@ -263,11 +424,19 @@ input:hover {
   background: var(--ink-3);
   flex: none;
 }
+.conn.open {
+  color: var(--good);
+  border-color: rgb(74 222 128 / 0.35);
+  background: var(--good-soft);
+}
 .conn.open i {
   background: var(--good);
+  box-shadow: 0 0 8px var(--good);
 }
 .conn.reconnecting {
   color: var(--warn);
+  border-color: rgb(255 159 69 / 0.4);
+  background: var(--warn-soft);
 }
 .conn.reconnecting i {
   background: var(--warn);
@@ -275,6 +444,8 @@ input:hover {
 }
 .conn.closed {
   color: var(--bad);
+  border-color: rgb(251 113 133 / 0.4);
+  background: var(--bad-soft);
 }
 .conn.closed i {
   background: var(--bad);
@@ -293,10 +464,37 @@ input:hover {
 /* --------------------------------------------------------------- card -- */
 
 .card {
-  background: var(--bg-elev);
+  background: var(--surface);
   border: 1px solid var(--line);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-xl);
   padding: var(--s5);
+  backdrop-filter: blur(12px);
+  box-shadow: var(--lift);
+}
+
+/* A card with a titled header strip — the reference's "QUICK PLAY (SOLO)"
+   and "MULTIPLAYER" containers. */
+.panel {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-xl);
+  padding: var(--s4);
+  backdrop-filter: blur(12px);
+  display: flex;
+  flex-direction: column;
+  gap: var(--s3);
+}
+.panel-head {
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+  padding: 0 var(--s1);
+}
+.panel-head .label {
+  color: var(--ink-2);
+}
+.panel-head .spacer {
+  margin-left: auto;
 }
 
 .notice {
@@ -304,10 +502,10 @@ input:hover {
   align-items: center;
   gap: var(--s3);
   background: var(--warn-soft);
-  border: 1px solid var(--warn);
+  border: 1px solid rgb(255 159 69 / 0.5);
   color: var(--ink);
   border-radius: var(--radius);
-  padding: 10px var(--s4);
+  padding: 11px var(--s4);
   font-size: 14px;
 }
 .notice button {
@@ -317,10 +515,16 @@ input:hover {
   padding: 2px 8px;
   font-size: 13px;
   border-color: transparent;
+  box-shadow: none;
+}
+.notice button:hover:not(:disabled) {
+  filter: none;
+  color: var(--ink);
+  box-shadow: none;
 }
 .notice.bad {
   background: var(--bad-soft);
-  border-color: var(--bad);
+  border-color: rgb(251 113 133 / 0.5);
 }
 
 /* --------------------------------------------------------- join view -- */
@@ -331,25 +535,57 @@ input:hover {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: var(--s3);
+  gap: var(--s4);
 }
+
+/* The wordmark: two stacked lines of heavy caps under one gradient, so the
+   ramp runs across the whole mark rather than restarting per line. */
 .hero h1 {
-  font-size: clamp(38px, 9vw, 54px);
-  font-weight: 700;
-  letter-spacing: -0.035em;
+  font-size: clamp(52px, 13vw, 92px);
+  font-weight: 800;
+  line-height: 0.92;
+  letter-spacing: -0.03em;
+  text-transform: uppercase;
+  margin: 0;
+  background: linear-gradient(180deg, #d7d8ff 0%, #b7a4ff 46%, #f3a5dc 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  filter: drop-shadow(0 12px 34px rgb(167 139 250 / 0.35));
 }
 .hero h1 span {
-  color: var(--accent);
+  display: block;
 }
+
+/* "THE INFINITE KNOWLEDGE ARENA" — the tagline reads as a component, not as
+   a sentence, which is what the box is doing. */
+.tagline {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+  padding: 9px 20px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+  backdrop-filter: blur(10px);
+}
+
 .hero p {
   color: var(--ink-3);
-  max-width: 34ch;
+  max-width: 40ch;
+  font-size: 15px;
 }
 
 .join-card {
   display: flex;
   flex-direction: column;
   gap: var(--s4);
+  max-width: 460px;
+  width: 100%;
+  align-self: center;
 }
 
 .field {
@@ -363,7 +599,10 @@ input:hover {
   align-items: center;
   gap: var(--s3);
   color: var(--ink-3);
-  font-size: 13px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
 }
 .divider::before,
 .divider::after {
@@ -379,6 +618,8 @@ input:hover {
 }
 .code-row input {
   font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: 18px;
   text-align: center;
   letter-spacing: 0.4em;
   text-transform: uppercase;
@@ -395,42 +636,49 @@ input:hover {
   align-items: center;
   justify-content: space-between;
   gap: var(--s4);
+  padding: var(--s3) var(--s4);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  backdrop-filter: blur(10px);
 }
 
 .pips {
   display: flex;
   gap: 5px;
   align-items: center;
+  margin-top: 6px;
 }
 .pip {
-  width: 7px;
-  height: 7px;
+  width: 8px;
+  height: 8px;
   border-radius: 50%;
-  background: var(--line-strong);
+  background: rgb(255 255 255 / 0.16);
 }
 .pip.done {
   background: var(--accent);
 }
 .pip.now {
-  background: var(--accent);
-  box-shadow: 0 0 0 3px var(--accent-soft);
+  background: var(--accent-bright);
+  box-shadow: 0 0 0 4px var(--accent-soft);
 }
 
 .prompt {
   font-family: var(--font-display);
-  font-size: clamp(22px, 4.4vw, 30px);
-  font-weight: 600;
+  font-size: clamp(23px, 4.2vw, 32px);
+  font-weight: 700;
   letter-spacing: -0.02em;
   line-height: 1.25;
   text-wrap: balance;
+  margin: var(--s2) 0;
 }
 
 /* --------------------------------------------------------- the ring --- */
 
 .ring {
   position: relative;
-  width: 76px;
-  height: 76px;
+  width: 78px;
+  height: 78px;
   flex: none;
 }
 .ring svg {
@@ -439,15 +687,17 @@ input:hover {
   transform: rotate(-90deg);
 }
 .ring .track {
-  stroke: var(--line);
+  stroke: rgb(255 255 255 / 0.1);
 }
 .ring .bar {
-  stroke: var(--accent);
+  stroke: var(--accent-bright);
   stroke-linecap: round;
+  filter: drop-shadow(0 0 6px rgb(167 139 250 / 0.75));
   transition: stroke 0.4s ease;
 }
 .ring.urgent .bar {
   stroke: var(--warn);
+  filter: drop-shadow(0 0 8px rgb(255 159 69 / 0.8));
 }
 .ring .count {
   position: absolute;
@@ -455,8 +705,8 @@ input:hover {
   display: grid;
   place-items: center;
   font-family: var(--font-display);
-  font-weight: 700;
-  font-size: 25px;
+  font-weight: 800;
+  font-size: 26px;
   font-variant-numeric: tabular-nums;
   color: var(--ink);
 }
@@ -471,34 +721,49 @@ input:hover {
   grid-template-columns: 1fr 1fr;
   gap: var(--s3);
 }
-@media (max-width: 520px) {
+@media (max-width: 560px) {
   .tiles {
     grid-template-columns: 1fr;
   }
 }
 
+/* Each tile carries its own faint hue, like the reference's category grid.
+   --h comes from the option's position, so four options are four colours.
+   The tint is decoration and stays quiet enough that the reveal states —
+   which repaint border, badge, fill and glyph — cannot be misread. */
 .tile {
+  --h: 260;
   display: flex;
   align-items: center;
   gap: var(--s3);
   text-align: left;
-  min-height: 84px;
+  min-height: 92px;
   padding: var(--s4);
-  background: var(--bg-elev);
   color: var(--ink);
-  border: 2px solid var(--line);
+  border: 1px solid var(--line);
   border-radius: var(--radius-lg);
+  font-family: var(--font-ui);
   font-weight: 500;
   font-size: 17px;
   line-height: 1.35;
+  box-shadow: none;
+  background:
+    linear-gradient(145deg, hsl(var(--h) 75% 62% / 0.16) 0%, hsl(var(--h) 75% 55% / 0.03) 62%),
+    var(--surface);
   transition:
     background 0.15s ease,
     border-color 0.15s ease,
+    transform 0.12s ease,
     opacity 0.25s ease;
 }
 .tile:hover:not(:disabled) {
-  background: var(--bg-hover);
-  border-color: var(--line-strong);
+  filter: none;
+  border-color: hsl(var(--h) 80% 70% / 0.55);
+  transform: translateY(-2px);
+  box-shadow: 0 14px 30px -20px hsl(var(--h) 80% 50% / 0.9);
+  background:
+    linear-gradient(145deg, hsl(var(--h) 75% 62% / 0.26) 0%, hsl(var(--h) 75% 55% / 0.06) 62%),
+    var(--surface-2);
 }
 .tile:active:not(:disabled) {
   transform: none;
@@ -511,25 +776,27 @@ input:hover {
 
 .tile .key {
   flex: none;
-  width: 30px;
-  height: 30px;
+  width: 34px;
+  height: 34px;
   display: grid;
   place-items: center;
-  border-radius: 8px;
-  background: var(--bg-raised);
-  color: var(--ink-2);
+  border-radius: 10px;
+  background: hsl(var(--h) 70% 60% / 0.2);
+  border: 1px solid hsl(var(--h) 70% 70% / 0.3);
+  color: hsl(var(--h) 90% 84%);
   font-family: var(--font-display);
-  font-weight: 700;
+  font-weight: 800;
   font-size: 14px;
   transition:
     background 0.15s ease,
-    color 0.15s ease;
+    color 0.15s ease,
+    border-color 0.15s ease;
 }
 
 .tile .mark {
   margin-left: auto;
   flex: none;
-  font-size: 18px;
+  font-size: 19px;
   line-height: 1;
 }
 
@@ -537,10 +804,12 @@ input:hover {
 .tile.picked,
 .tile.picked:hover:not(:disabled) {
   border-color: var(--accent);
-  background: var(--accent-soft);
+  background: linear-gradient(145deg, rgb(167 139 250 / 0.3), rgb(244 114 182 / 0.12));
+  box-shadow: 0 0 0 1px rgb(167 139 250 / 0.35);
 }
 .tile.picked .key {
   background: var(--accent);
+  border-color: var(--accent-bright);
   color: var(--on-accent);
 }
 
@@ -549,11 +818,13 @@ input:hover {
 .tile.correct,
 .tile.correct:hover:not(:disabled) {
   border-color: var(--good);
-  background: var(--good-soft);
+  background: linear-gradient(145deg, rgb(74 222 128 / 0.22), rgb(74 222 128 / 0.05));
+  box-shadow: 0 0 0 1px rgb(74 222 128 / 0.4);
 }
 .tile.correct .key {
   background: var(--good);
-  color: var(--on-accent);
+  border-color: var(--good);
+  color: #06281a;
 }
 .tile.correct .mark {
   color: var(--good);
@@ -561,17 +832,18 @@ input:hover {
 .tile.wrong,
 .tile.wrong:hover:not(:disabled) {
   border-color: var(--bad);
-  background: var(--bad-soft);
+  background: linear-gradient(145deg, rgb(251 113 133 / 0.22), rgb(251 113 133 / 0.05));
 }
 .tile.wrong .key {
   background: var(--bad);
-  color: var(--on-accent);
+  border-color: var(--bad);
+  color: #2b0a12;
 }
 .tile.wrong .mark {
   color: var(--bad);
 }
 .tile.faded {
-  opacity: 0.4;
+  opacity: 0.35;
 }
 
 /* ---------------------------------------------------------- progress --- */
@@ -582,7 +854,8 @@ input:hover {
   gap: var(--s3);
   font-size: 14px;
   color: var(--ink-3);
-  min-height: 24px;
+  min-height: 26px;
+  padding: 0 var(--s1);
 }
 .progress .dots {
   display: flex;
@@ -592,15 +865,16 @@ input:hover {
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: var(--line-strong);
+  background: rgb(255 255 255 / 0.16);
   transition: background 0.2s ease;
 }
 .progress .dots i.in {
   background: var(--accent);
+  box-shadow: 0 0 6px rgb(167 139 250 / 0.7);
 }
 .progress .status {
   color: var(--ink-2);
-  font-weight: 500;
+  font-weight: 600;
 }
 
 /* ------------------------------------------------------- leaderboard --- */
@@ -608,80 +882,152 @@ input:hover {
 .board {
   display: flex;
   flex-direction: column;
-  gap: var(--s1);
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
 }
 
 .row {
   display: flex;
   align-items: center;
   gap: var(--s3);
-  padding: 10px var(--s4);
-  background: var(--bg-elev);
+  padding: 9px 14px;
+  background: var(--surface);
   border: 1px solid var(--line);
   border-radius: var(--radius);
   will-change: transform;
 }
 .row.you {
-  border-color: var(--accent);
-  background: var(--accent-soft);
+  border-color: rgb(167 139 250 / 0.5);
+  background: linear-gradient(100deg, rgb(167 139 250 / 0.22), rgb(244 114 182 / 0.07));
 }
 .row.gone {
-  opacity: 0.5;
+  opacity: 0.45;
 }
 
+/* The rank badge. Top three get the metals — the reference's habit of making
+   standing visible without reading the number. */
 .row .rank {
-  font-family: var(--font-display);
-  font-weight: 600;
-  font-size: 14px;
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: 12px;
   color: var(--ink-3);
-  width: 18px;
+  width: 24px;
+  height: 24px;
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
+  background: rgb(255 255 255 / 0.06);
   font-variant-numeric: tabular-nums;
   flex: none;
 }
+.row:first-child .rank {
+  background: linear-gradient(140deg, var(--gold), #d98c1f);
+  color: #2a1a02;
+}
+.row:nth-child(2) .rank {
+  background: linear-gradient(140deg, var(--silver), #8fa0b4);
+  color: #1a2029;
+}
+.row:nth-child(3) .rank {
+  background: linear-gradient(140deg, var(--bronze), #a5673c);
+  color: #2a1408;
+}
+
+.row .face {
+  flex: none;
+  width: 26px;
+  height: 26px;
+  display: grid;
+  place-items: center;
+  font-size: 14px;
+  line-height: 1;
+  border-radius: 8px;
+  background: rgb(255 255 255 / 0.07);
+}
+
 .row .who {
-  font-weight: 500;
+  font-weight: 600;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 .row .score {
   margin-left: auto;
-  font-family: var(--font-display);
+  /* Flexbox splits free space between competing auto margins, so with a delta
+     on screen both would drift to the middle. The delta takes the gap and the
+     score rides beside it. */
+  font-family: var(--font-mono);
   font-weight: 700;
-  font-size: 17px;
+  font-size: 16px;
+  color: var(--gold);
   font-variant-numeric: tabular-nums;
   flex: none;
 }
 
 .chip {
   font-family: var(--font-mono);
-  font-size: 10px;
+  font-size: 9px;
   font-weight: 500;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
-  padding: 2px 7px;
+  padding: 3px 8px;
   border-radius: var(--radius-pill);
   border: 1px solid var(--line-strong);
   color: var(--ink-3);
   flex: none;
 }
 .chip.host {
-  border-color: var(--accent);
-  color: var(--accent);
+  border-color: rgb(167 139 250 / 0.55);
+  color: var(--accent-bright);
+  background: var(--accent-soft);
 }
 .chip.ready {
-  border-color: var(--good);
+  border-color: rgb(74 222 128 / 0.5);
   color: var(--good);
+  background: var(--good-soft);
 }
 .chip.away {
-  border-color: var(--warn);
+  border-color: rgb(255 159 69 / 0.5);
   color: var(--warn);
+  background: var(--warn-soft);
+}
+
+/* The reference's "● 14 LIVE GAMES" badge, reused for room population. */
+.live {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--good);
+  background: var(--good-soft);
+  border: 1px solid rgb(74 222 128 / 0.35);
+  border-radius: var(--radius-pill);
+  padding: 4px 11px;
+}
+.live::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--good);
+  box-shadow: 0 0 8px var(--good);
+}
+
+.row:has(.delta) .score {
+  margin-left: 0;
 }
 
 .delta {
-  font-family: var(--font-display);
+  margin-left: auto;
+  font-family: var(--font-mono);
   font-weight: 700;
-  font-size: 14px;
+  font-size: 13px;
   font-variant-numeric: tabular-nums;
   color: var(--good);
   flex: none;
@@ -704,50 +1050,90 @@ input:hover {
 
 /* -------------------------------------------------------- mode picker -- */
 
+/* The reference's category grid, on real rows. Each tile takes its hue from
+   its position in the list, so any number of modes stays legible. */
 .modes {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(148px, 1fr));
+  gap: var(--s3);
+}
+
+.mode {
+  --h: 260;
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: var(--s2);
-}
-.mode {
-  display: grid;
-  grid-template-columns: auto 1fr auto;
-  align-items: center;
-  gap: var(--s1) var(--s3);
-  padding: var(--s3) var(--s4);
-  background: var(--bg-elev);
-  border: 2px solid var(--line);
-  border-radius: var(--radius);
+  min-height: 116px;
+  padding: var(--s4);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
   cursor: pointer;
+  overflow: hidden;
+  background:
+    linear-gradient(150deg, hsl(var(--h) 75% 60% / 0.22) 0%, hsl(var(--h) 75% 50% / 0.03) 60%),
+    var(--surface);
   transition:
     border-color 0.15s ease,
-    background 0.15s ease;
+    transform 0.12s ease,
+    box-shadow 0.15s ease;
 }
 .mode:hover {
-  border-color: var(--line-strong);
+  border-color: hsl(var(--h) 80% 70% / 0.5);
+  transform: translateY(-2px);
 }
 .mode.picked {
-  border-color: var(--accent);
-  background: var(--accent-soft);
+  border-color: var(--accent-bright);
+  box-shadow:
+    0 0 0 1px var(--accent-bright),
+    0 16px 34px -22px hsl(var(--h) 80% 55% / 1);
 }
+.mode:has(input:focus-visible) {
+  box-shadow: var(--ring-focus);
+}
+.mode:has(input:disabled) {
+  cursor: default;
+  transform: none;
+}
+
+/* The radio still exists and is still what the keyboard and screen reader
+   drive — it is only painted out. Selection is shown by the tile itself. */
 .mode input {
-  width: auto;
-  accent-color: var(--accent);
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
   margin: 0;
+  pointer-events: none;
+}
+
+.mode .icon {
+  font-size: 24px;
+  line-height: 1;
+  margin-bottom: auto;
 }
 .mode .name {
-  font-weight: 600;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 15px;
+  letter-spacing: -0.01em;
 }
 .mode .meta {
   font-family: var(--font-mono);
-  font-size: 12px;
+  font-size: 11px;
   color: var(--ink-3);
   white-space: nowrap;
 }
 .mode .blurb {
-  grid-column: 2 / 4;
-  font-size: 13px;
+  font-size: 12px;
+  line-height: 1.4;
   color: var(--ink-3);
+  /* Two lines, then ellipsis — a mode is a row, so the blurb is arbitrary
+     text and cannot be allowed to set the height of the whole grid. */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 /* ------------------------------------------------------------ results -- */
@@ -758,23 +1144,34 @@ input:hover {
   flex-direction: column;
   align-items: center;
   gap: var(--s2);
-  padding: var(--s5) 0 var(--s3);
+  padding: var(--s6) var(--s4) var(--s5);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-xl);
+  backdrop-filter: blur(12px);
 }
 .podium .crown {
-  font-size: 34px;
+  font-size: 44px;
   line-height: 1;
+  filter: drop-shadow(0 8px 20px rgb(251 191 36 / 0.45));
 }
 .podium .winner {
   font-family: var(--font-display);
-  font-size: clamp(26px, 6vw, 34px);
-  font-weight: 700;
-  letter-spacing: -0.02em;
+  font-size: clamp(30px, 7vw, 44px);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  background: linear-gradient(180deg, #d7d8ff 0%, #b7a4ff 48%, #f3a5dc 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
 }
 .podium .final {
-  font-family: var(--font-display);
-  font-size: 19px;
-  font-weight: 600;
-  color: var(--accent);
+  font-family: var(--font-mono);
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--gold);
   font-variant-numeric: tabular-nums;
 }
 
@@ -783,6 +1180,9 @@ input:hover {
   align-items: center;
   gap: var(--s3);
   flex-wrap: wrap;
+}
+.actions.mid {
+  justify-content: center;
 }
 
 .center {
@@ -798,10 +1198,18 @@ input:hover {
 }
 .intro .round {
   font-family: var(--font-display);
-  font-size: clamp(30px, 7vw, 42px);
-  font-weight: 700;
+  font-size: clamp(34px, 7vw, 48px);
+  font-weight: 800;
   letter-spacing: -0.03em;
   animation: rise 0.4s cubic-bezier(0.2, 0.9, 0.2, 1) both;
+  background: linear-gradient(180deg, #d7d8ff 0%, #b7a4ff 50%, #f3a5dc 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.intro .round span {
+  -webkit-text-fill-color: var(--ink-3);
+  color: var(--ink-3);
 }
 
 /* ------------------------------------------------------------- motion -- */

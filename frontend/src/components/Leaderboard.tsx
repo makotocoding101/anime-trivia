@@ -1,6 +1,7 @@
 import { useFlip } from "../hooks/useFlip";
 import type { RoomView } from "../store/room";
 import type { PlayerRow } from "../types/wire";
+import { avatarFor } from "../ui/identity";
 
 interface Props {
   view: RoomView;
@@ -42,6 +43,9 @@ export function Leaderboard({ view, deltas }: Props) {
             }`}
           >
             {!lobby && <span className="rank">{index + 1}</span>}
+            <span className="face" aria-hidden="true">
+              {avatarFor(player.id)}
+            </span>
             <span className="who">{player.name}</span>
             {player.is_host && <span className="chip host">host</span>}
             {lobby && player.ready && <span className="chip ready">ready</span>}

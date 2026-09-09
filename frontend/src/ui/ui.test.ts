@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { flipDeltas } from "./flip";
+import { avatarFor, hueForIndex, iconForMode } from "./identity";
 import { displaySeconds, isUrgent, ringDashOffset, ringFraction } from "./ring";
 
 describe("ring geometry", () => {
@@ -82,5 +83,32 @@ describe("flipDeltas", () => {
   it("skips rows that vanished", () => {
     const after = new Map([["a", 0]]);
     expect(flipDeltas(before, after).size).toBe(0);
+  });
+});
+
+describe("visual identity", () => {
+  it("is stable: the same key always decorates the same way", () => {
+    expect(avatarFor("p-abc")).toBe(avatarFor("p-abc"));
+    expect(iconForMode("quick-5", "Quick 5")).toBe(iconForMode("quick-5", "Quick 5"));
+  });
+
+  it("gives every tile in a grid its own hue, on the wheel", () => {
+    const hues = Array.from({ length: 12 }, (_, i) => hueForIndex(i));
+    for (const h of hues) {
+      expect(h).toBeGreaterThanOrEqual(0);
+      expect(h).toBeLessThan(360);
+    }
+    // The guarantee hashing could not give: no two tiles on screen together
+    // share a colour. This is why hue comes from position, not from the slug.
+    expect(new Set(hues).size).toBe(hues.length);
+  });
+
+  it("reads the slug where it says something, and never comes back blank", () => {
+    expect(iconForMode("quick-5", "Quick 5")).toBe("⚡");
+    expect(iconForMode("hard-3", "Hard 3")).toBe("🔥");
+    expect(iconForMode("shonen-only", "Shonen")).toBe("⚔️");
+    // Modes are rows, so unknown slugs are the normal case, not the edge one.
+    expect(iconForMode("zzz-unknowable").length).toBeGreaterThan(0);
+    expect(avatarFor("").length).toBeGreaterThan(0);
   });
 });

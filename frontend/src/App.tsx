@@ -6,6 +6,7 @@ import { GameScreen } from "./components/GameScreen";
 import { JoinScreen } from "./components/JoinScreen";
 import { LobbyScreen } from "./components/LobbyScreen";
 import { createRoom, RoomSocket, type SocketStatus } from "./net/socket";
+import { avatarFor } from "./ui/identity";
 import { useRoomStore } from "./store/room";
 
 /** Wire error codes are machine-readable by design (spec §05); the UI is
@@ -74,6 +75,7 @@ export function App() {
 
   const socket = socketRef.current;
   const inRoom = status !== "idle" && socket !== null && view.you !== null;
+  const me = view.players.find((p) => p.id === view.you) ?? null;
 
   if (!inRoom || socket === null) {
     return (
@@ -103,11 +105,29 @@ export function App() {
     <div className="app">
       <div className="frame">
         <header className="topbar">
-          <span className="brand">
-            kagen<span>.</span>
-          </span>
+          <span className="brand grad">OtaKizu</span>
           <span className="roomcode">{view.roomCode}</span>
           <span className="spacer" />
+
+          {me !== null && (
+            <span className="whoami">
+              <span className="face" aria-hidden="true">
+                {avatarFor(me.id)}
+              </span>
+              <span className="who">
+                <span className="label">playing as</span>
+                <b>{me.name}</b>
+              </span>
+            </span>
+          )}
+          {me !== null && view.phase !== "LOBBY" && (
+            <span className="coin">
+              <span aria-hidden="true">🪙</span>
+              <span className="sr-only">your score: </span>
+              {me.score}
+            </span>
+          )}
+
           <ConnectionDot status={status} />
           <button type="button" className="ghost" onClick={leave}>
             leave

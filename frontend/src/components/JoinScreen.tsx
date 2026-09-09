@@ -15,12 +15,14 @@ export function JoinScreen({ onJoin, onCreate, connecting, error }: Props) {
   return (
     <div className="frame">
       <div className="hero">
-        <h1>
-          kagen<span>.</span>
+        {/* Split across two lines so the gradient ramps over the whole mark,
+            as in the reference. The label keeps it one word for a reader. */}
+        <h1 aria-label="OtaKizu">
+          <span aria-hidden="true">Ota</span>
+          <span aria-hidden="true">Kizu</span>
         </h1>
-        <p>
-          Real-time anime trivia. Same question, same clock, everyone at once.
-        </p>
+        <div className="tagline">The real-time anime arena</div>
+        <p>Same question, same clock, everyone at once.</p>
       </div>
 
       {error !== null && (

@@ -28,9 +28,16 @@ export function GameOverScreen({ view, socket }: Props) {
         )}
       </div>
 
-      <Leaderboard view={view} />
+      <div className="panel">
+        <div className="panel-head">
+          <span className="label">final standings</span>
+          <span className="spacer" />
+          <span className="live">{view.players.length} played</span>
+        </div>
+        <Leaderboard view={view} />
+      </div>
 
-      <div className="actions">
+      <div className="actions mid">
         {isHost ? (
           <button type="button" onClick={() => socket.send({ type: "rematch" })}>
             play again

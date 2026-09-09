@@ -1,8 +1,9 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type CSSProperties } from "react";
 
 import { apiUrl } from "../net/base";
 import type { RoomSocket } from "../net/socket";
 import type { RoomView } from "../store/room";
+import { hueForIndex, iconForMode } from "../ui/identity";
 import { Leaderboard } from "./Leaderboard";
 
 interface Mode {
@@ -56,56 +57,84 @@ export function LobbyScreen({ view, socket }: Props) {
         </p>
       </div>
 
-      <Leaderboard view={view} />
-
-      <div>
-        <div className="label" style={{ marginBottom: "8px" }}>
-          game mode
-        </div>
-        {modesFailed ? (
-          <p className="muted">Couldn&apos;t load modes — is the server running?</p>
-        ) : (
-          <div className="modes" role="radiogroup" aria-label="game mode">
-            {modes.map((mode) => (
-              <label
-                key={mode.id}
-                className={`mode${modeId === mode.id ? " picked" : ""}`}
-              >
-                <input
-                  type="radio"
-                  name="mode"
-                  checked={modeId === mode.id}
-                  disabled={!isHost}
-                  onChange={() => setModeId(mode.id)}
-                />
-                <span className="name">{mode.name}</span>
-                <span className="meta">
-                  {mode.question_count} × {mode.seconds_per_q}s
-                </span>
-                {mode.blurb !== null && <span className="blurb">{mode.blurb}</span>}
-              </label>
-            ))}
+      <div className="stage">
+        <div className="panel">
+          <div className="panel-head">
+            <span className="label">⚡ game mode</span>
+            <span className="spacer" />
+            {!isHost && modes.length > 0 && (
+              <span className="label">host&apos;s pick</span>
+            )}
           </div>
-        )}
-      </div>
 
-      <div className="actions">
-        <button
-          type="button"
-          className={`ghost${me?.ready === true ? " on" : ""}`}
-          onClick={() => socket.send({ type: "set_ready", ready: !(me?.ready ?? false) })}
-        >
-          {me?.ready === true ? "ready ✓" : "i'm ready"}
-        </button>
-        {isHost && (
-          <button
-            type="button"
-            disabled={modeId === null}
-            onClick={() => modeId !== null && socket.send({ type: "start_game", mode_id: modeId })}
-          >
-            start game
-          </button>
-        )}
+          {modesFailed ? (
+            <p className="muted">Couldn&apos;t load modes — is the server running?</p>
+          ) : (
+            <div className="modes" role="radiogroup" aria-label="game mode">
+              {modes.map((mode, index) => (
+                <label
+                  key={mode.id}
+                  className={`mode${modeId === mode.id ? " picked" : ""}`}
+                  /* Hue by position, not by id: modes are rows, so the palette
+                     cannot be hard-coded per mode without a deploy. */
+                  style={{ "--h": hueForIndex(index) } as CSSProperties}
+                >
+                  <input
+                    type="radio"
+                    name="mode"
+                    checked={modeId === mode.id}
+                    disabled={!isHost}
+                    onChange={() => setModeId(mode.id)}
+                  />
+                  <span className="icon" aria-hidden="true">
+                    {iconForMode(mode.slug, mode.name)}
+                  </span>
+                  <span className="name">{mode.name}</span>
+                  <span className="meta">
+                    {mode.question_count} × {mode.seconds_per_q}s
+                  </span>
+                  {mode.blurb !== null && <span className="blurb">{mode.blurb}</span>}
+                </label>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="stack">
+          <div className="panel">
+            <div className="panel-head">
+              <span className="label">players</span>
+              <span className="spacer" />
+              <span className="live">
+                {view.players.length} in room
+              </span>
+            </div>
+            <Leaderboard view={view} />
+          </div>
+
+          <div className="actions">
+            <button
+              type="button"
+              className={`ghost${me?.ready === true ? " on" : ""}`}
+              onClick={() =>
+                socket.send({ type: "set_ready", ready: !(me?.ready ?? false) })
+              }
+            >
+              {me?.ready === true ? "ready ✓" : "i'm ready"}
+            </button>
+            {isHost && (
+              <button
+                type="button"
+                disabled={modeId === null}
+                onClick={() =>
+                  modeId !== null && socket.send({ type: "start_game", mode_id: modeId })
+                }
+              >
+                start game
+              </button>
+            )}
+          </div>
+        </div>
       </div>
     </>
   );
