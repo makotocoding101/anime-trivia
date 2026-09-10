@@ -26,10 +26,19 @@
   color-scheme: dark;
 
   /* --- ground ----------------------------------------------------------- */
-  --bg: #241c56;
-  --bg-deep: #1c1545;
-  --glow-core: rgb(139 99 231 / 0.5);
-  --glow-low: rgb(184 118 236 / 0.22);
+  /* Low chroma on purpose. The eye-strain in a dark UI comes from saturation
+     at middling lightness, not from lightness itself: a vivid indigo filling
+     the whole viewport is a large, intense field to sit in front of. These
+     sit near 20% saturation instead of 50%, which keeps the night mood while
+     leaving the accent violet as the only genuinely colourful thing on
+     screen — which is what makes the accent read as an accent. */
+  --bg: #252336;
+  --bg-deep: #1f1d2d;
+  /* Softened hard: a bright hotspot behind the middle of the page is the
+     other half of the fatigue, so the glow is now a suggestion of depth
+     rather than a light source. */
+  --glow-core: rgb(122 110 168 / 0.2);
+  --glow-low: rgb(140 122 178 / 0.1);
 
   /* --- surfaces (translucent — see header note) -------------------------- */
   /* Raised alongside the ground. A white veil over a lighter backdrop
@@ -38,7 +47,7 @@
   --surface: rgb(255 255 255 / 0.07);
   --surface-2: rgb(255 255 255 / 0.11);
   --surface-hover: rgb(255 255 255 / 0.15);
-  --surface-solid: #2b2263; /* only where translucency would stack badly */
+  --surface-solid: #2e2c42; /* only where translucency would stack badly */
 
   --line: rgb(255 255 255 / 0.14);
   --line-strong: rgb(255 255 255 / 0.3);
@@ -127,7 +136,7 @@ body {
   background:
     radial-gradient(1100px 760px at 50% 38%, var(--glow-core), transparent 68%),
     radial-gradient(900px 620px at 50% 108%, var(--glow-low), transparent 70%),
-    linear-gradient(180deg, #2e2470 0%, var(--bg) 55%, var(--bg-deep) 100%);
+    linear-gradient(180deg, #2b2940 0%, var(--bg) 55%, var(--bg-deep) 100%);
   background-attachment: fixed;
   background-color: var(--bg-deep);
 }
