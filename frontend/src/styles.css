@@ -26,38 +26,24 @@
   color-scheme: dark;
 
   /* --- ground ----------------------------------------------------------- */
-  /* Low chroma on purpose. The eye-strain in a dark UI comes from saturation
-     at middling lightness, not from lightness itself: a vivid indigo filling
-     the whole viewport is a large, intense field to sit in front of. These
-     sit near 20% saturation instead of 50%, which keeps the night mood while
-     leaving the accent violet as the only genuinely colourful thing on
-     screen — which is what makes the accent read as an accent. */
-  --bg: #252336;
-  --bg-deep: #1f1d2d;
-  /* Softened hard: a bright hotspot behind the middle of the page is the
-     other half of the fatigue, so the glow is now a suggestion of depth
-     rather than a light source. */
-  --glow-core: rgb(122 110 168 / 0.2);
-  --glow-low: rgb(140 122 178 / 0.1);
+  --bg: #0b0820;
+  --bg-deep: #07051a;
+  --glow-core: rgb(112 74 205 / 0.55);
+  --glow-low: rgb(160 96 220 / 0.22);
 
   /* --- surfaces (translucent — see header note) -------------------------- */
-  /* Raised alongside the ground. A white veil over a lighter backdrop
-     separates less, so holding the old alphas here would have made every
-     panel dissolve into the page. */
-  --surface: rgb(255 255 255 / 0.07);
-  --surface-2: rgb(255 255 255 / 0.11);
-  --surface-hover: rgb(255 255 255 / 0.15);
-  --surface-solid: #2e2c42; /* only where translucency would stack badly */
+  --surface: rgb(255 255 255 / 0.045);
+  --surface-2: rgb(255 255 255 / 0.075);
+  --surface-hover: rgb(255 255 255 / 0.1);
+  --surface-solid: #171233; /* only where translucency would stack badly */
 
-  --line: rgb(255 255 255 / 0.14);
-  --line-strong: rgb(255 255 255 / 0.3);
+  --line: rgb(255 255 255 / 0.09);
+  --line-strong: rgb(255 255 255 / 0.2);
 
   /* --- ink -------------------------------------------------------------- */
-  --ink: #f4f2ff;
-  --ink-2: #c9c2ea;
-  /* Lightened with the ground: #8b83b8 sat at ~4.9:1 on the old near-black
-     and would have fallen to ~3.5:1 here, under the 4.5:1 body-text floor. */
-  --ink-3: #a9a1d4;
+  --ink: #efecff;
+  --ink-2: #b9b1e0;
+  --ink-3: #8b83b8;
 
   /* --- accent (brand + interaction) ------------------------------------- */
   --accent: #a78bfa;
@@ -101,15 +87,7 @@
   --radius-pill: 999px;
 
   --ring-focus: 0 0 0 3px rgb(167 139 250 / 0.5);
-
-  /* Depth comes from an edge, not from a pool of black. The old shadow was
-     near-black on a near-black ground, so it read as haze rather than as
-     lift — the hairline highlight along the top of a panel is what actually
-     separates it, and the shadow underneath only has to be darker than the
-     ground it falls on. */
-  --lift:
-    0 16px 34px -22px rgb(10 4 34 / 0.75),
-    inset 0 1px 0 rgb(255 255 255 / 0.08);
+  --lift: 0 18px 40px -24px rgb(0 0 0 / 0.9);
 }
 
 /* ---------------------------------------------------------------- base -- */
@@ -136,7 +114,7 @@ body {
   background:
     radial-gradient(1100px 760px at 50% 38%, var(--glow-core), transparent 68%),
     radial-gradient(900px 620px at 50% 108%, var(--glow-low), transparent 70%),
-    linear-gradient(180deg, #2b2940 0%, var(--bg) 55%, var(--bg-deep) 100%);
+    linear-gradient(180deg, #100c2b 0%, var(--bg) 55%, var(--bg-deep) 100%);
   background-attachment: fixed;
   background-color: var(--bg-deep);
 }
@@ -259,7 +237,7 @@ button.ghost.on {
 input {
   font: inherit;
   font-family: var(--font-ui);
-  background: rgb(12 6 38 / 0.35);
+  background: rgb(0 0 0 / 0.22);
   color: var(--ink);
   border: 1px solid var(--line);
   border-radius: var(--radius);
@@ -277,7 +255,7 @@ input:hover {
 }
 input:focus {
   border-color: var(--accent);
-  background: rgb(12 6 38 / 0.45);
+  background: rgb(0 0 0 / 0.3);
 }
 
 /* -------------------------------------------------------------- shell -- */
@@ -502,7 +480,6 @@ input:focus {
   border-radius: var(--radius-xl);
   padding: var(--s4);
   backdrop-filter: blur(12px);
-  box-shadow: var(--lift);
   display: flex;
   flex-direction: column;
   gap: var(--s3);
@@ -697,7 +674,7 @@ input:focus {
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: rgb(255 255 255 / 0.22);
+  background: rgb(255 255 255 / 0.16);
 }
 .pip.done {
   background: var(--accent);
@@ -731,7 +708,7 @@ input:focus {
   transform: rotate(-90deg);
 }
 .ring .track {
-  stroke: rgb(255 255 255 / 0.18);
+  stroke: rgb(255 255 255 / 0.1);
 }
 .ring .bar {
   stroke: var(--accent-bright);
@@ -909,7 +886,7 @@ input:focus {
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: rgb(255 255 255 / 0.22);
+  background: rgb(255 255 255 / 0.16);
   transition: background 0.2s ease;
 }
 .progress .dots i.in {
@@ -962,7 +939,7 @@ input:focus {
   display: grid;
   place-items: center;
   border-radius: 8px;
-  background: rgb(255 255 255 / 0.1);
+  background: rgb(255 255 255 / 0.06);
   font-variant-numeric: tabular-nums;
   flex: none;
 }
@@ -988,7 +965,7 @@ input:focus {
   font-size: 14px;
   line-height: 1;
   border-radius: 8px;
-  background: rgb(255 255 255 / 0.11);
+  background: rgb(255 255 255 / 0.07);
 }
 
 .row .who {
@@ -1566,7 +1543,7 @@ input:focus {
 .meter {
   height: 10px;
   border-radius: var(--radius-pill);
-  background: rgb(255 255 255 / 0.11);
+  background: rgb(255 255 255 / 0.07);
   border: 1px solid var(--line);
   overflow: hidden;
 }
