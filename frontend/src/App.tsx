@@ -3,11 +3,14 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { ConnectionDot } from "./components/ConnectionDot";
 import { GameOverScreen } from "./components/GameOverScreen";
 import { GameScreen } from "./components/GameScreen";
-import { JoinScreen } from "./components/JoinScreen";
+import { HomeScreen, loadWallet } from "./components/HomeScreen";
 import { LobbyScreen } from "./components/LobbyScreen";
+import { ProfileScreen } from "./components/ProfileScreen";
+import { RankingsScreen } from "./components/RankingsScreen";
+import { loadName, type Wallet } from "./net/menu";
 import { createRoom, RoomSocket, type SocketStatus } from "./net/socket";
-import { avatarFor } from "./ui/identity";
 import { useRoomStore } from "./store/room";
+import { avatarFor } from "./ui/identity";
 
 /** Wire error codes are machine-readable by design (spec §05); the UI is
  * where they become sentences. Anything unlisted falls back to its code. */
@@ -23,6 +26,8 @@ const ERROR_TEXT: Record<string, string> = {
   mode_not_found: "that game mode is gone",
 };
 
+type MenuView = "home" | "rankings" | "profile";
+
 export function App() {
   const view = useRoomStore((s) => s.view);
   const dispatchFrame = useRoomStore((s) => s.dispatchFrame);
@@ -32,6 +37,10 @@ export function App() {
   const socketRef = useRef<RoomSocket | null>(null);
   const [status, setStatus] = useState<SocketStatus | "idle">("idle");
   const [joinError, setJoinError] = useState<string | null>(null);
+  const [name, setName] = useState(loadName);
+  const [wallet, setWallet] = useState<Wallet | null>(null);
+  const [menu, setMenu] = useState<MenuView>("home");
+  const [pendingModeId, setPendingModeId] = useState<number | null>(null);
   const needsResync = view.needsResync;
 
   // R-11's gap rule: a hole in the broadcast stream means this connection is
@@ -40,11 +49,26 @@ export function App() {
     if (needsResync) socketRef.current?.resync();
   }, [needsResync]);
 
+  const refreshWallet = useCallback(() => {
+    loadWallet(name).then(setWallet).catch(() => undefined);
+  }, [name]);
+
+  useEffect(refreshWallet, [refreshWallet]);
+
+  // Coins are credited inside the transaction that records the game, which
+  // runs after the game_over broadcast — so the balance may not be written
+  // yet when this fires. Refetching again on the way back to the menu is the
+  // safety net; two cheap reads beat guessing at a delay.
+  const phase = view.phase;
+  useEffect(() => {
+    if (phase === "GAME_OVER") refreshWallet();
+  }, [phase, refreshWallet]);
+
   const enterRoom = useCallback(
-    (code: string, name: string) => {
+    (code: string, playerName: string) => {
       reset();
       setJoinError(null);
-      const socket = new RoomSocket(code.toUpperCase(), name, {
+      const socket = new RoomSocket(code.toUpperCase(), playerName, {
         onFrame: dispatchFrame,
         onStatus: setStatus,
       });
@@ -54,15 +78,24 @@ export function App() {
     [dispatchFrame, reset],
   );
 
-  const handleCreate = useCallback(
-    async (name: string) => {
+  const handlePlay = useCallback(
+    async (modeId: number) => {
+      setPendingModeId(modeId);
       try {
         enterRoom(await createRoom(), name);
       } catch {
         setJoinError("couldn't reach the server — is it running?");
       }
     },
-    [enterRoom],
+    [enterRoom, name],
+  );
+
+  const handleJoin = useCallback(
+    (code: string) => {
+      setPendingModeId(null);
+      enterRoom(code, name);
+    },
+    [enterRoom, name],
   );
 
   const leave = useCallback(() => {
@@ -70,23 +103,46 @@ export function App() {
     socketRef.current?.close();
     socketRef.current = null;
     setStatus("idle");
+    setPendingModeId(null);
+    setMenu("home");
     reset();
-  }, [reset]);
+    refreshWallet();
+  }, [reset, refreshWallet]);
 
   const socket = socketRef.current;
   const inRoom = status !== "idle" && socket !== null && view.you !== null;
   const me = view.players.find((p) => p.id === view.you) ?? null;
 
   if (!inRoom || socket === null) {
+    const error =
+      joinError ?? (status === "closed" ? "you left the room — rejoin below" : null);
+
+    if (menu === "rankings") {
+      return (
+        <div className="app">
+          <RankingsScreen name={name} onBack={() => setMenu("home")} />
+        </div>
+      );
+    }
+    if (menu === "profile") {
+      return (
+        <div className="app">
+          <ProfileScreen name={name} wallet={wallet} onBack={() => setMenu("home")} />
+        </div>
+      );
+    }
     return (
       <div className="app">
-        <JoinScreen
-          onJoin={enterRoom}
-          onCreate={handleCreate}
+        <HomeScreen
+          name={name}
+          onNameChange={setName}
+          wallet={wallet}
+          onPlay={handlePlay}
+          onJoin={handleJoin}
+          onOpenRankings={() => setMenu("rankings")}
+          onOpenProfile={() => setMenu("profile")}
           connecting={status === "connecting"}
-          error={
-            joinError ?? (status === "closed" ? "you left the room — rejoin below" : null)
-          }
+          error={error}
         />
       </div>
     );
@@ -94,7 +150,7 @@ export function App() {
 
   const body =
     view.phase === "LOBBY" ? (
-      <LobbyScreen view={view} socket={socket} />
+      <LobbyScreen view={view} socket={socket} initialModeId={pendingModeId} />
     ) : view.phase === "GAME_OVER" ? (
       <GameOverScreen view={view} socket={socket} />
     ) : (

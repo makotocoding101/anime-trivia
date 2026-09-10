@@ -48,19 +48,28 @@ const FALLBACK_ICONS = ["🎌", "🌸", "⭐", "🎴", "🍥", "🗾", "🎧", "
 /** Slug/name keywords worth recognising. First match wins, so order is
  * specificity: "op" would match half the dictionary if it came first. */
 const ICON_KEYWORDS: ReadonlyArray<readonly [RegExp, string]> = [
+  // Genres first, and each one distinct from its neighbours: shoujo and
+  // romance sit side by side on the home grid, so they must not both be a
+  // pink heart. Same for isekai and fantasy.
+  [/shonen|shounen/, "⚔️"],
+  [/shoujo|shojo/, "🎀"],
+  [/seinen/, "🌑"],
+  [/slice.?of.?life|iyashikei|comfy|ghibli/, "🌿"],
+  [/romance|love/, "💞"],
+  [/isekai/, "🪄"],
+  [/comedy|gag|funny/, "😂"],
+  [/fantasy|magic/, "🐉"],
+  // Then everything else a slug might plausibly say.
   [/quick|speed|blitz|rapid|sprint/, "⚡"],
   [/hard|expert|brutal|nightmare|insane/, "🔥"],
-  [/easy|casual|starter|beginner/, "🌱"],
-  [/shonen|shounen|battle|fight/, "⚔️"],
-  [/shojo|shoujo|romance|love/, "💗"],
+  [/easy|starter|beginner/, "🌱"],
+  [/battle|fight|tournament/, "👊"],
   [/mecha|robot|gundam/, "🤖"],
   [/movie|film|cinema/, "🎬"],
-  [/music|opening|ending|\bost\b|theme/, "🎵"],
-  [/horror|dark|demon|curse/, "👻"],
-  [/isekai|fantasy|magic/, "🪄"],
+  [/music|opening|ending|soundtrack|theme/, "🎵"],
+  [/horror|demon|curse/, "👻"],
   [/sport|volley|basket|soccer/, "🏐"],
   [/food|cook|gourmet/, "🍜"],
-  [/ghibli|slice|comfy|iyashikei/, "🌿"],
   [/classic|retro|golden|nostalgi/, "📼"],
   [/season|current|airing|new/, "🗓️"],
   [/pirate|adventure|journey/, "🧭"],

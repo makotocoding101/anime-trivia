@@ -18,13 +18,16 @@ interface Mode {
 interface Props {
   view: RoomView;
   socket: RoomSocket;
+  /** Chosen on the home screen before the room existed. Only a starting
+   * point — the host can still change it here. */
+  initialModeId?: number | null;
 }
 
-export function LobbyScreen({ view, socket }: Props) {
+export function LobbyScreen({ view, socket, initialModeId = null }: Props) {
   const me = view.players.find((p) => p.id === view.you);
   const isHost = me?.is_host ?? false;
   const [modes, setModes] = useState<Mode[]>([]);
-  const [modeId, setModeId] = useState<number | null>(null);
+  const [modeId, setModeId] = useState<number | null>(initialModeId);
   const [modesFailed, setModesFailed] = useState(false);
 
   useEffect(() => {
@@ -34,7 +37,14 @@ export function LobbyScreen({ view, socket }: Props) {
       .then((rows: Mode[]) => {
         if (cancelled) return;
         setModes(rows);
-        setModeId((current) => current ?? rows[0]?.id ?? null);
+        // Keep the genre picked on the home screen if it is still a real
+        // mode; otherwise fall back to the first one rather than leaving the
+        // host with nothing selected.
+        setModeId((current) =>
+          current !== null && rows.some((r) => r.id === current)
+            ? current
+            : (rows[0]?.id ?? null),
+        );
       })
       .catch(() => {
         if (!cancelled) setModesFailed(true);

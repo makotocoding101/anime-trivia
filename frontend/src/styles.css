@@ -538,23 +538,44 @@ input:focus {
   gap: var(--s4);
 }
 
-/* The wordmark: two stacked lines of heavy caps under one gradient, so the
-   ramp runs across the whole mark rather than restarting per line. */
+/* The wordmark: one line of heavy caps, and the only thing on the site that
+   animates while nothing is happening. The gradient is three times the width
+   of the text and slides, so the colour moves through the letters rather than
+   the letters moving — no layout is touched, so it costs a compositor pass
+   and nothing else. prefers-reduced-motion freezes it via the global rule. */
 .hero h1 {
-  font-size: clamp(52px, 13vw, 92px);
+  font-size: clamp(40px, 11.5vw, 88px);
   font-weight: 800;
-  line-height: 0.92;
+  line-height: 1;
   letter-spacing: -0.03em;
   text-transform: uppercase;
   margin: 0;
-  background: linear-gradient(180deg, #d7d8ff 0%, #b7a4ff 46%, #f3a5dc 100%);
+  white-space: nowrap;
+  background: linear-gradient(
+    100deg,
+    #cfd0ff 0%,
+    #b7a4ff 22%,
+    #f3a5dc 42%,
+    #9ecbff 62%,
+    #c4b5fd 82%,
+    #cfd0ff 100%
+  );
+  background-size: 300% 100%;
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
   filter: drop-shadow(0 12px 34px rgb(167 139 250 / 0.35));
+  animation: drift 9s ease-in-out infinite;
 }
-.hero h1 span {
-  display: block;
+
+@keyframes drift {
+  0%,
+  100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
 }
 
 /* "THE INFINITE KNOWLEDGE ARENA" — the tagline reads as a component, not as
@@ -565,11 +586,11 @@ input:focus {
   font-weight: 500;
   letter-spacing: 0.2em;
   text-transform: uppercase;
-  color: var(--ink-2);
+  color: #ffffff;
   padding: 9px 20px;
-  border: 1px solid var(--line);
+  border: 1px solid rgb(255 255 255 / 0.07);
   border-radius: var(--radius);
-  background: var(--surface);
+  background: rgb(255 255 255 / 0.02);
   backdrop-filter: blur(10px);
 }
 
@@ -1222,4 +1243,321 @@ input:focus {
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
+}
+
+/* ============================================================ home screen -- */
+
+/* The bar above the hero: nothing on the left, value on the right, as in the
+   reference. It is not .topbar — there is no room to name yet. */
+.homebar {
+  display: flex;
+  align-items: center;
+  gap: var(--s3);
+  min-height: 36px;
+}
+.homebar .spacer {
+  margin-left: auto;
+}
+
+.pagetitle {
+  font-family: var(--font-display);
+  font-size: clamp(26px, 5vw, 38px);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  background: linear-gradient(180deg, #d7d8ff 0%, #b7a4ff 50%, #f3a5dc 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.namebar {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s2);
+  max-width: 460px;
+  width: 100%;
+  align-self: center;
+  padding: var(--s4);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  backdrop-filter: blur(10px);
+}
+
+/* The reference's welcome strip, full width and with the rank on the right. */
+.whoami.wide {
+  display: flex;
+  width: 100%;
+  padding: var(--s2) var(--s2) var(--s2) var(--s3);
+  border-radius: var(--radius-lg);
+}
+.whoami.wide .spacer {
+  margin-left: auto;
+}
+.whoami.wide .face {
+  width: 36px;
+  height: 36px;
+  font-size: 19px;
+}
+
+.rankchip {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.15;
+  padding-left: var(--s4);
+  border-left: 1px solid var(--line);
+}
+.rankchip .label {
+  font-size: 9px;
+  letter-spacing: 0.18em;
+}
+.rankchip b {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: 13px;
+  letter-spacing: 0.06em;
+  color: var(--gold);
+}
+
+/* ------------------------------------------------------- the genre grid -- */
+
+/* Four across on a wide screen, exactly like the reference's category block;
+   two across on a phone. Hue by position, so eight genres are eight colours. */
+.genres {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--s3);
+}
+@media (min-width: 620px) {
+  .genres {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+.genre {
+  --h: 260;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--s2);
+  min-height: 118px;
+  padding: var(--s4);
+  text-align: left;
+  color: var(--ink);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  box-shadow: none;
+  background:
+    linear-gradient(150deg, hsl(var(--h) 75% 60% / 0.24) 0%, hsl(var(--h) 75% 50% / 0.03) 62%),
+    var(--surface);
+  transition:
+    border-color 0.15s ease,
+    transform 0.12s ease,
+    box-shadow 0.15s ease;
+}
+.genre:hover:not(:disabled) {
+  filter: none;
+  transform: translateY(-3px);
+  border-color: hsl(var(--h) 80% 70% / 0.6);
+  box-shadow: 0 18px 34px -22px hsl(var(--h) 85% 55% / 1);
+}
+.genre .icon {
+  font-size: 26px;
+  line-height: 1;
+  margin-bottom: auto;
+}
+.genre .name {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 15px;
+  letter-spacing: -0.01em;
+}
+.genre .meta {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  color: var(--ink-3);
+}
+
+/* ------------------------------------------- multiplayer + nav cards ----- */
+
+.bigcard {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--s3);
+  padding: var(--s5) var(--s4);
+  text-align: center;
+  background:
+    linear-gradient(160deg, rgb(167 139 250 / 0.16), rgb(244 114 182 / 0.05) 70%),
+    var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-xl);
+  backdrop-filter: blur(12px);
+}
+.bigcard .glyph {
+  font-size: 30px;
+  line-height: 1;
+}
+.bigcard .title {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 17px;
+  letter-spacing: 0.06em;
+}
+.bigcard .code-row {
+  width: 100%;
+  margin-top: var(--s1);
+}
+
+/* The live counter. No status dot: the number is the signal, and a pulsing
+   dot beside a figure that updates every ten seconds implies a liveness the
+   poll does not actually have. */
+.tally {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--good);
+  background: var(--good-soft);
+  border: 1px solid rgb(74 222 128 / 0.35);
+  border-radius: var(--radius-pill);
+  padding: 5px 13px;
+}
+.tally b {
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.navpair {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--s3);
+}
+
+.navcard {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--s2);
+  min-height: 104px;
+  padding: var(--s4);
+  color: var(--ink);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  box-shadow: none;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  transition:
+    border-color 0.15s ease,
+    background 0.15s ease,
+    transform 0.12s ease;
+}
+.navcard:hover:not(:disabled) {
+  filter: none;
+  transform: translateY(-3px);
+  background: var(--surface-2);
+  border-color: var(--line-strong);
+}
+.navcard .glyph {
+  font-size: 24px;
+  line-height: 1;
+}
+
+/* ------------------------------------------------ rankings and profile -- */
+
+/* Wins/played, sitting between the tier chip and the coin total. Mono so the
+   two numbers line up down the column. */
+.row .record {
+  margin-left: auto;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--ink-3);
+  font-variant-numeric: tabular-nums;
+  flex: none;
+}
+.row:has(.record) .score {
+  margin-left: var(--s2);
+}
+
+.profilehead {
+  display: flex;
+  align-items: center;
+  gap: var(--s4);
+}
+.bigface {
+  width: 68px;
+  height: 68px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  font-size: 34px;
+  line-height: 1;
+  border-radius: var(--radius-lg);
+  background: linear-gradient(140deg, rgb(167 139 250 / 0.35), rgb(244 114 182 / 0.2));
+  border: 1px solid var(--line);
+}
+.tierchip {
+  display: inline-block;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  color: var(--gold);
+  background: var(--gold-soft);
+  border: 1px solid rgb(251 191 36 / 0.45);
+  border-radius: var(--radius-pill);
+  padding: 3px 12px;
+}
+
+.statgrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: var(--s3);
+}
+.stat {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s1);
+  padding: var(--s3) var(--s4);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+.stat b {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 22px;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+.stat b.gold {
+  color: var(--gold);
+}
+
+.meter {
+  height: 10px;
+  border-radius: var(--radius-pill);
+  background: rgb(255 255 255 / 0.07);
+  border: 1px solid var(--line);
+  overflow: hidden;
+}
+.meter i {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent), var(--accent-2));
+  border-radius: var(--radius-pill);
+}
+
+.footnote {
+  font-size: 12px;
+  line-height: 1.6;
+  text-align: center;
+  max-width: 62ch;
+  align-self: center;
 }
