@@ -62,7 +62,11 @@ class Player:
     ws: ClientConnection
     player_id: str = ""
     last_seq: int = 0
+    last_round_seq: int = 0
     questions: dict[int, float] = field(default_factory=dict)  # round_seq -> recv monotonic
+    options: dict[int, list[int]] = field(default_factory=dict)  # round_seq -> option ids
+    picked: dict[int, int] = field(default_factory=dict)  # round_seq -> option submitted
+    keys: dict[int, int] = field(default_factory=dict)  # round_seq -> correct option, from reveal
     answered: set[int] = field(default_factory=set)
     submitted: dict[int, float] = field(default_factory=dict)
     acks: dict[int, float] = field(default_factory=dict)
@@ -90,8 +94,16 @@ async def recv_loop(player: Player, metrics: Metrics, done: asyncio.Event) -> No
                     player.player_id = frame["data"]["player_id"]
                 case "question":
                     player.questions[frame["data"]["round_seq"]] = time.monotonic()
+                    player.options[frame["data"]["round_seq"]] = [
+                        o["id"] for o in frame["data"]["options"]
+                    ]
+                    player.last_round_seq = frame["data"]["round_seq"]
                 case "answer_ack":
                     player.acks[frame["data"]["round_seq"]] = time.monotonic()
+                case "reveal":
+                    # The only frame carrying the key (R-12), and the only way
+                    # this harness can know whether a blind pick was right.
+                    player.keys[player.last_round_seq] = frame["data"]["correct_option_id"]
                 case "error":
                     metrics.rejects[str(frame["data"]["code"])] += 1
                 case "game_over":
@@ -146,21 +158,30 @@ async def play_room(
         # Contention: every player fires at the same instant, `lead_ms` before
         # their own view of the deadline. Same option on purpose — identical
         # payloads make a double-credit bug show up as a score, not a tie.
+        #
+        # Read from the frame rather than hardcoded: option ids are per-question
+        # ordinals on the file-backed store but global answer_option ids once
+        # Postgres is behind it (see DbStore._to_loaded), so a literal 0 is a
+        # valid answer in one configuration and rejected in the other.
+        option_id = players[0].options[round_seq][0]
         fire_at = time.monotonic() + max(0.0, (lead_ms / 1000.0))
 
-        async def submit(player: Player, rs: int = round_seq, at: float = fire_at) -> None:
+        async def submit(
+            player: Player, rs: int = round_seq, at: float = fire_at, oid: int = option_id
+        ) -> None:
             delay = at - time.monotonic()
             if delay > 0:
                 await asyncio.sleep(delay)
             sent = time.monotonic()
             metrics.submit_offset_ms.append((sent - at) * 1000)
             player.submitted[rs] = sent
+            player.picked[rs] = oid
             await player.ws.send(
                 json.dumps(
                     {
                         "type": "submit_answer",
                         "round_seq": rs,
-                        "option_id": 0,
+                        "option_id": oid,
                         "cid": f"{player.name}-{rs}",
                     }
                 )
@@ -194,10 +215,22 @@ async def play_room(
             if json.dumps(other, sort_keys=True) != first:
                 metrics.violations.append(f"room {code}: clients disagree on standings")
                 break
-        total_answers = sum(len(p.answered) for p in players)
+        # Every player answers the same option every round, blind, so whether
+        # anyone scores depends entirely on the deck. Comparing picks against
+        # the keys the reveals published turns "did anything score?" from a
+        # guess about the question bank into an exact statement: points must
+        # appear when a pick matched, and must not appear when none did.
+        hits = sum(
+            1
+            for p in players
+            for rs, pick in p.picked.items()
+            if rs in p.keys and p.keys[rs] == pick
+        )
         scored = sum(int(row["score"]) for row in finals[0])  # type: ignore[index]
-        if total_answers and scored == 0:
-            metrics.violations.append(f"room {code}: answers accepted but nothing scored")
+        if hits and scored == 0:
+            metrics.violations.append(f"room {code}: {hits} correct answers scored nothing")
+        if not hits and scored:
+            metrics.violations.append(f"room {code}: scored {scored} with no correct answer")
 
 
 def percentile(values: list[float], pct: float) -> float:
