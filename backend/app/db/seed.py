@@ -8,8 +8,8 @@ ids are inserted explicitly (the seed file owns them) and the sequence is
 bumped past them.
 
 Refuses to touch a database that already has questions unless --replace is
-given; --replace truncates CONTENT tables only and fails if game history
-references them (game_answer's FK is deliberately not cascade).
+given; --replace clears CONTENT tables only and fails if game history
+actually references them (game_answer's FK is deliberately not cascade).
 """
 
 from __future__ import annotations
@@ -22,7 +22,8 @@ import sys
 from pathlib import Path
 
 from sqlalchemy import func, select, text
-from sqlalchemy.ext.asyncio import AsyncEngine, async_sessionmaker
+from sqlalchemy.exc import IntegrityError
+from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 
 from app.db.models import AnswerOption, GameMode, Question, QuestionTag, Series, Tag
 from app.db.store import make_engine
@@ -56,12 +57,7 @@ async def import_seed(
                 "to truncate content tables (game history blocks it by FK, on purpose)"
             )
         if existing:
-            await session.execute(
-                text(
-                    "TRUNCATE question_tag, answer_option, question, tag, series, game_mode "
-                    "RESTART IDENTITY"
-                )
-            )
+            await _clear_content(session)
 
         tags_by_slug: dict[str, Tag] = {}
         series_by_slug: dict[str, Series] = {}
@@ -147,6 +143,41 @@ async def import_seed(
 
     await check_mode_margins(engine)
     return counts
+
+
+# Children before parents: DELETE respects foreign keys row by row, so the
+# order is load-bearing rather than cosmetic.
+_CONTENT_TABLES = ("question_tag", "answer_option", "question", "game_mode", "tag", "series")
+
+# Tables whose ids are assigned by a sequence rather than by the seed file.
+_CONTENT_SEQUENCES = ("tag", "series", "game_mode")
+
+
+async def _clear_content(session: AsyncSession) -> None:
+    """Empty the content tables, refusing if game history depends on them.
+
+    DELETE rather than TRUNCATE, and the distinction is the whole point.
+    TRUNCATE refuses whenever a foreign key *exists* pointing at a table in
+    the list — game_answer references answer_option, so it fails on every
+    migrated schema whether or not a single game was ever played. DELETE
+    fails only when a row actually references the content, which is the rule
+    this seeder always meant to enforce: history blocks a reseed, an empty
+    history does not.
+    """
+    try:
+        for table in _CONTENT_TABLES:
+            await session.execute(text(f"DELETE FROM {table}"))
+    except IntegrityError as exc:
+        raise SeedImportError(
+            "recorded games reference the questions or modes being replaced; "
+            "the content tables cannot be reseeded without discarding that "
+            "history first (game_answer's foreign key is deliberately not "
+            "ON DELETE CASCADE)"
+        ) from exc
+    for table in _CONTENT_SEQUENCES:
+        await session.execute(
+            text(f"SELECT setval(pg_get_serial_sequence('{table}', 'id'), 1, false)")
+        )
 
 
 async def check_mode_margins(engine: AsyncEngine) -> None:

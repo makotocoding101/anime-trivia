@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import datetime
 import json
+import pathlib
 import uuid
 
 import pytest
@@ -36,12 +37,24 @@ def store(engine: AsyncEngine) -> DbStore:
     return DbStore(engine, BASE)
 
 
+def _seed_file(name: str) -> dict:
+    path = pathlib.Path(__file__).parents[2] / "seed" / name
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
 async def test_seed_landed(engine: AsyncEngine) -> None:
+    # Counted against the seed files rather than against literals: the bank is
+    # content, and a test that has to be edited every time a question is added
+    # stops being read and starts being updated reflexively.
+    expected_questions = _seed_file("questions.json")["questions"]
+    expected_modes = _seed_file("modes.json")["modes"]
     async with engine.connect() as conn:
         questions = await conn.scalar(select(func.count(Question.id)))
         options = await conn.scalar(select(func.count(AnswerOption.id)))
         modes = await conn.scalar(select(func.count(GameMode.id)))
-    assert (questions, options, modes) == (10, 40, 2)
+    assert questions == len(expected_questions)
+    assert options == sum(len(q["options"]) for q in expected_questions)
+    assert modes == len(expected_modes)
 
 
 async def test_one_correct_per_question_is_unrepresentable(engine: AsyncEngine) -> None:
@@ -68,31 +81,37 @@ async def test_modes_have_the_required_margin(engine: AsyncEngine) -> None:
 
 
 async def test_list_modes(store: DbStore) -> None:
+    expected = _seed_file("modes.json")["modes"]
     modes = await store.list_modes()
-    assert [m.slug for m in modes] == ["quick-5", "hard-3"]
-    assert modes[0].question_count == 5 and modes[0].seconds_per_q == 20
-    assert modes[1].question_count == 3 and modes[1].seconds_per_q == 15
+    assert [m.slug for m in modes] == [m["slug"] for m in expected]
+    assert [m.question_count for m in modes] == [m["question_count"] for m in expected]
+    assert [m.seconds_per_q for m in modes] == [m["seconds_per_q"] for m in expected]
 
 
 async def test_load_deck_respects_the_mode_spec(store: DbStore) -> None:
-    modes = {m.slug: m for m in await store.list_modes()}
+    spec = _seed_file("modes.json")["modes"][0]
+    mode = next(m for m in await store.list_modes() if m.slug == spec["slug"])
 
-    deck, config = await store.load_deck(modes["quick-5"].id)
-    assert len(deck) == 5
-    assert len({q.id for q in deck}) == 5  # without replacement (R-15)
-    assert config.question_count == 5
-    assert config.seconds_per_question == 20.0
+    deck, config = await store.load_deck(mode.id)
+    assert len(deck) == spec["question_count"]
+    assert len({q.id for q in deck}) == len(deck)  # without replacement (R-15)
+    assert config.question_count == spec["question_count"]
+    assert config.seconds_per_question == float(spec["seconds_per_q"])
     assert config.grace_seconds == BASE.grace_seconds  # pacing comes from base
     for q in deck:
         option_ids = {o.id for o in q.options}
         assert q.correct_option_id in option_ids
         assert len(option_ids) == 4
         assert min(option_ids) > 0  # global answer_option ids, not ordinals
+        assert spec["difficulty_min"] <= q.difficulty <= spec["difficulty_max"]
 
-    hard_deck, hard_config = await store.load_deck(modes["hard-3"].id)
-    assert len(hard_deck) == 3
-    assert all(q.difficulty >= 2 for q in hard_deck)
-    assert hard_config.seconds_per_question == 15.0
+
+async def test_every_seeded_mode_can_deal_a_deck(store: DbStore) -> None:
+    """check_mode_margins proves enough questions match; this proves they
+    actually come back. A tag typo satisfies the first and fails the second."""
+    for mode in await store.list_modes():
+        deck, _ = await store.load_deck(mode.id)
+        assert len(deck) == mode.question_count, mode.slug
 
 
 async def test_load_deck_unknown_mode(store: DbStore) -> None:
@@ -114,7 +133,12 @@ async def test_thin_mode_refuses_to_deal(store: DbStore, engine: AsyncEngine) ->
     assert exc.value.code == "deck_too_small"
 
 
-def _record(deck_question_id: int, correct_option_id: int) -> GameRecord:
+def _record(
+    deck_question_id: int,
+    correct_option_id: int,
+    winner: str = "aoi",
+    loser: str = "ren",
+) -> GameRecord:
     pid_a: PlayerId = str(uuid.uuid4())
     pid_b: PlayerId = str(uuid.uuid4())
     now = datetime.datetime.now(datetime.UTC)
@@ -137,8 +161,8 @@ def _record(deck_question_id: int, correct_option_id: int) -> GameRecord:
             ),
         ),
         standings=(
-            StandingRow(pid_a, "aoi", 145, 1, 2000),
-            StandingRow(pid_b, "ren", 0, 2, 20000),
+            StandingRow(pid_a, winner, 145, 1, 2000),
+            StandingRow(pid_b, loser, 0, 2, 20000),
         ),
     )
 
@@ -200,7 +224,7 @@ def test_full_game_lands_in_postgres(migrated_db: str) -> None:
     with TestClient(app) as client:
         code = client.post("/api/rooms").json()["code"]
         modes = client.get("/api/modes").json()
-        hard = next(m for m in modes if m["slug"] == "hard-3")
+        mode = modes[0]
 
         with (
             client.websocket_connect(f"/ws/rooms/{code}") as ws1,
@@ -208,7 +232,7 @@ def test_full_game_lands_in_postgres(migrated_db: str) -> None:
         ):
             for ws, name in ((ws1, "aoi"), (ws2, "ren")):
                 ws.send_text(json.dumps({"type": "join", "name": name}))
-            ws1.send_text(json.dumps({"type": "start_game", "mode_id": hard["id"]}))
+            ws1.send_text(json.dumps({"type": "start_game", "mode_id": mode["id"]}))
 
             def pump(ws, type_):
                 for _ in range(80):
@@ -217,15 +241,18 @@ def test_full_game_lands_in_postgres(migrated_db: str) -> None:
                         return frame
                 raise AssertionError(f"no {type_} frame")
 
-            for _ in range(hard["question_count"]):
+            # Real questions do not name their own answer — that is R-12
+            # working. So both players pick blind and the reveal frame, which
+            # is the only place the key is ever sent, says what it was worth.
+            awarded: dict[str, int] = {}
+            for _ in range(mode["question_count"]):
                 q1 = pump(ws1, "question")
                 pump(ws2, "question")
-                # Answer per the placeholder prompt's own instruction.
-                letter = q1["data"]["prompt"].rstrip(".").split()[-1]
-                correct = next(
-                    o["id"] for o in q1["data"]["options"] if o["label"].endswith(letter)
-                )
-                for ws, option in ((ws1, correct), (ws2, correct)):
+                assert "correct" not in json.dumps(q1["data"])
+                for ws, option in (
+                    (ws1, q1["data"]["options"][0]["id"]),
+                    (ws2, q1["data"]["options"][1]["id"]),
+                ):
                     ws.send_text(
                         json.dumps(
                             {
@@ -235,13 +262,19 @@ def test_full_game_lands_in_postgres(migrated_db: str) -> None:
                             }
                         )
                     )
+                reveal = pump(ws1, "reveal")
+                pump(ws2, "reveal")
+                for result in reveal["data"]["results"]:
+                    awarded[result["player_id"]] = (
+                        awarded.get(result["player_id"], 0) + result["delta"]
+                    )
             over = pump(ws1, "game_over")
-            assert over["data"]["standings"][0]["score"] > 0
+            assert {s["player_id"]: s["score"] for s in over["data"]["standings"]} == awarded
 
     # The lifespan exit disposed the app's engine; inspect with a fresh one.
     import asyncio
 
-    async def fetch_counts() -> tuple[int, int, int]:
+    async def fetch_counts() -> tuple[int, int, int, int]:
         engine = create_async_engine(migrated_db)
         try:
             async with engine.connect() as conn:
@@ -258,11 +291,92 @@ def test_full_game_lands_in_postgres(migrated_db: str) -> None:
                     .join(Game, Game.id == GamePlayer.game_id)
                     .where(Game.room_code == code)
                 )
+                points = await conn.scalar(
+                    select(func.coalesce(func.sum(GameAnswer.points), 0))
+                    .select_from(GameAnswer)
+                    .join(Game, Game.id == GameAnswer.game_id)
+                    .where(Game.room_code == code)
+                )
         finally:
             await engine.dispose()
-        return games or 0, answers or 0, players or 0
+        return games or 0, answers or 0, players or 0, points or 0
 
-    games, answers, players = asyncio.run(fetch_counts())
+    games, answers, players, points = asyncio.run(fetch_counts())
     assert games == 1
     assert players == 2
-    assert answers == hard["question_count"] * 2  # every round, both players
+    assert answers == mode["question_count"] * 2  # every round, both players
+    # The persisted points are the same numbers the live game broadcast — the
+    # crossing that the whole data-model boundary exists to make trustworthy.
+    assert points == sum(awarded.values())
+
+
+# --- currency ------------------------------------------------------------
+#
+# Wallets accumulate across games by design, so each test below uses names
+# nothing else touches: a shared database plus a running total makes any
+# assertion on an absolute balance a hidden dependency on test order.
+
+
+async def test_finishing_a_game_credits_both_wallets(store: DbStore) -> None:
+    deck, _ = await store.load_deck(1)
+    await store.record_game(_record(deck[0].id, deck[0].correct_option_id, "wal-win", "wal-lose"))
+
+    winner = await store.get_wallet("wal-win")
+    loser = await store.get_wallet("wal-lose")
+    assert winner is not None and loser is not None
+    # 10 participation + 145//20 = 7 performance + 50 for first of two.
+    assert winner.coins == 67
+    assert winner.wins == 1 and winner.games_played == 1 and winner.best_score == 145
+    # Second of two is last: participation only, no podium bonus.
+    assert loser.coins == 10
+    assert loser.wins == 0 and loser.games_played == 1
+
+
+async def test_a_second_game_accumulates_rather_than_replaces(store: DbStore) -> None:
+    deck, _ = await store.load_deck(1)
+    for _ in range(2):
+        await store.record_game(
+            _record(deck[0].id, deck[0].correct_option_id, "wal-twice", "wal-other")
+        )
+    wallet = await store.get_wallet("wal-twice")
+    assert wallet is not None
+    assert wallet.coins == 134 and wallet.games_played == 2 and wallet.wins == 2
+    # best_score is a high-water mark, not a running sum.
+    assert wallet.best_score == 145 and wallet.lifetime_score == 290
+
+
+async def test_the_wallet_is_reached_by_normalised_name(store: DbStore) -> None:
+    deck, _ = await store.load_deck(1)
+    await store.record_game(
+        _record(deck[0].id, deck[0].correct_option_id, "Wal-Case", "wal-case-loser")
+    )
+    # Same wallet however it is typed — v1 has no accounts, so the normalised
+    # name IS the identity.
+    for spelling in ("wal-case", "WAL-CASE", "  Wal-Case  "):
+        wallet = await store.get_wallet(spelling)
+        assert wallet is not None and wallet.coins == 67
+    # ...and it renders with the spelling its owner actually used.
+    assert (await store.get_wallet("wal-case")).name == "Wal-Case"  # type: ignore[union-attr]
+
+
+async def test_an_unplayed_name_has_no_wallet(store: DbStore) -> None:
+    assert await store.get_wallet("nobody-has-ever-been-called-this") is None
+
+
+async def test_rankings_order_by_coins_and_assign_positions(store: DbStore) -> None:
+    deck, _ = await store.load_deck(1)
+    await store.record_game(_record(deck[0].id, deck[0].correct_option_id, "wal-rank", "wal-tail"))
+
+    rows = await store.list_rankings(limit=100)
+    assert [r.rank for r in rows] == list(range(1, len(rows) + 1))
+    coins = [r.wallet.coins for r in rows]
+    assert coins == sorted(coins, reverse=True)
+    assert any(r.wallet.name == "wal-rank" for r in rows)
+
+
+async def test_rankings_respect_the_limit(store: DbStore) -> None:
+    deck, _ = await store.load_deck(1)
+    await store.record_game(
+        _record(deck[0].id, deck[0].correct_option_id, "wal-lim-a", "wal-lim-b")
+    )
+    assert len(await store.list_rankings(limit=1)) == 1

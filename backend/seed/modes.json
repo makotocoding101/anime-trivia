@@ -1,27 +1,93 @@
 {
-  "_comment": "Placeholder modes sized to the placeholder bank. Real modes (series-specific, genre, seasonal) are INSERTs once the real question bank lands.",
+  "_comment": "Eight genre modes, one per tile on the home grid. Each is a stored query specification (spec §06) — required_tags names a genre tag, so adding 'Mecha' or 'Sports' is another entry here plus questions carrying the tag, never a deploy. seed.py's check_mode_margins refuses the import unless each mode has question_count x2 matching questions.",
   "modes": [
     {
-      "slug": "quick-5",
-      "name": "Quick 5",
-      "blurb": "Five questions, any difficulty. The whole loop in two minutes.",
+      "slug": "shonen",
+      "name": "Shonen",
+      "blurb": "Tournament arcs, power-ups and shouted attack names.",
       "series": null,
-      "required_tags": [],
+      "required_tags": ["shonen"],
       "difficulty_min": 1,
       "difficulty_max": 3,
       "question_count": 5,
       "seconds_per_q": 20
     },
     {
-      "slug": "hard-3",
-      "name": "Hard 3",
-      "blurb": "Three questions, difficulty 2 and up, shorter clock.",
+      "slug": "shoujo",
+      "name": "Shoujo",
+      "blurb": "Transfer students, blushing confessions and enormous eyes.",
       "series": null,
-      "required_tags": [],
-      "difficulty_min": 2,
+      "required_tags": ["shoujo"],
+      "difficulty_min": 1,
       "difficulty_max": 3,
-      "question_count": 3,
-      "seconds_per_q": 15
+      "question_count": 5,
+      "seconds_per_q": 20
+    },
+    {
+      "slug": "seinen",
+      "name": "Seinen",
+      "blurb": "Grown-up, grim and usually about the cost of something.",
+      "series": null,
+      "required_tags": ["seinen"],
+      "difficulty_min": 1,
+      "difficulty_max": 3,
+      "question_count": 5,
+      "seconds_per_q": 20
+    },
+    {
+      "slug": "slice-of-life",
+      "name": "Slice of Life",
+      "blurb": "Nothing happens, beautifully, for twelve episodes.",
+      "series": null,
+      "required_tags": ["slice-of-life"],
+      "difficulty_min": 1,
+      "difficulty_max": 3,
+      "question_count": 5,
+      "seconds_per_q": 20
+    },
+    {
+      "slug": "romance",
+      "name": "Romance",
+      "blurb": "Two people who will confess in the finale, or not at all.",
+      "series": null,
+      "required_tags": ["romance"],
+      "difficulty_min": 1,
+      "difficulty_max": 3,
+      "question_count": 5,
+      "seconds_per_q": 20
+    },
+    {
+      "slug": "isekai",
+      "name": "Isekai",
+      "blurb": "Truck-kun, a status screen and a second chance.",
+      "series": null,
+      "required_tags": ["isekai"],
+      "difficulty_min": 1,
+      "difficulty_max": 3,
+      "question_count": 5,
+      "seconds_per_q": 20
+    },
+    {
+      "slug": "comedy",
+      "name": "Comedy",
+      "blurb": "Reaction faces, running gags and no plot to speak of.",
+      "series": null,
+      "required_tags": ["comedy"],
+      "difficulty_min": 1,
+      "difficulty_max": 3,
+      "question_count": 5,
+      "seconds_per_q": 20
+    },
+    {
+      "slug": "fantasy",
+      "name": "Fantasy",
+      "blurb": "Magic systems, elves, and a dungeon somebody has to clear.",
+      "series": null,
+      "required_tags": ["fantasy"],
+      "difficulty_min": 1,
+      "difficulty_max": 3,
+      "question_count": 5,
+      "seconds_per_q": 20
     }
   ]
 }

@@ -11,7 +11,13 @@ import dataclasses
 import logging
 
 from sqlalchemy import distinct, func, select
-from sqlalchemy.ext.asyncio import AsyncEngine, async_sessionmaker, create_async_engine
+from sqlalchemy.dialects.postgresql import insert as pg_insert
+from sqlalchemy.ext.asyncio import (
+    AsyncEngine,
+    AsyncSession,
+    async_sessionmaker,
+    create_async_engine,
+)
 from sqlalchemy.orm import selectinload
 
 from app.db.models import (
@@ -19,12 +25,14 @@ from app.db.models import (
     GameAnswer,
     GameMode,
     GamePlayer,
+    PlayerWallet,
     Question,
     QuestionTag,
 )
+from app.game.economy import coins_awarded, wallet_key
 from app.game.errors import GameError
 from app.game.state import GameConfig, LoadedQuestion, Option
-from app.store import GameRecord, ModeInfo
+from app.store import GameRecord, ModeInfo, RankRow, WalletRow
 
 logger = logging.getLogger(__name__)
 
@@ -138,12 +146,95 @@ class DbStore:
                 for rnd in record.history
                 for player_id, (option_id, elapsed_ms, points) in rnd.entries.items()
             )
+            await self._credit_wallets(session, record)
         logger.info(
             "recorded game %s: %d rounds, %d players",
             record.game_id,
             len(record.history),
             len(record.standings),
         )
+
+    @staticmethod
+    async def _credit_wallets(session: AsyncSession, record: GameRecord) -> None:
+        """Pay out the game, inside the same transaction that recorded it.
+
+        Sharing the transaction is the point: a payout that can commit while
+        the result it was computed from rolls back is a currency that mints
+        itself. It also keeps the end-of-game boundary at exactly one write —
+        several statements, one commit.
+
+        One upsert per player rather than one batched statement, because two
+        players in the same game can normalise to the same wallet (nothing
+        stops two people typing "aoi"). Postgres refuses to let a single
+        INSERT ... ON CONFLICT touch one row twice; separate statements
+        accumulate onto it correctly, which is the behaviour we want — both
+        of them did play.
+        """
+        player_count = len(record.standings)
+        for row in record.standings:
+            score = max(0, row.final_score)
+            coins = coins_awarded(
+                final_score=row.final_score,
+                final_rank=row.final_rank,
+                player_count=player_count,
+            )
+            won = 1 if row.final_rank == 1 else 0
+            stmt = pg_insert(PlayerWallet).values(
+                name_key=wallet_key(row.name),
+                display_name=row.name,
+                coins=coins,
+                games_played=1,
+                wins=won,
+                best_score=score,
+                lifetime_score=score,
+                updated_at=record.ended_at,
+            )
+            await session.execute(
+                stmt.on_conflict_do_update(
+                    index_elements=[PlayerWallet.name_key],
+                    set_={
+                        # Re-stamped every game: the wallet renders with the
+                        # capitalisation its owner used most recently.
+                        "display_name": stmt.excluded.display_name,
+                        "coins": PlayerWallet.coins + coins,
+                        "games_played": PlayerWallet.games_played + 1,
+                        "wins": PlayerWallet.wins + won,
+                        "best_score": func.greatest(PlayerWallet.best_score, score),
+                        "lifetime_score": PlayerWallet.lifetime_score + score,
+                        "updated_at": record.ended_at,
+                    },
+                )
+            )
+
+    async def list_rankings(self, limit: int = 50) -> list[RankRow]:
+        """The global table. Ordered by coins, tie-broken by key so the order
+        is total — two wallets on equal coins must not swap places between
+        two reads that nothing happened between."""
+        async with self._session() as session:
+            rows = (
+                await session.scalars(
+                    select(PlayerWallet)
+                    .order_by(PlayerWallet.coins.desc(), PlayerWallet.name_key)
+                    .limit(limit)
+                )
+            ).all()
+        return [RankRow(rank=i, wallet=_to_wallet(w)) for i, w in enumerate(rows, start=1)]
+
+    async def get_wallet(self, name: str) -> WalletRow | None:
+        async with self._session() as session:
+            row = await session.get(PlayerWallet, wallet_key(name))
+        return None if row is None else _to_wallet(row)
+
+
+def _to_wallet(w: PlayerWallet) -> WalletRow:
+    return WalletRow(
+        name=w.display_name,
+        coins=w.coins,
+        games_played=w.games_played,
+        wins=w.wins,
+        best_score=w.best_score,
+        lifetime_score=w.lifetime_score,
+    )
 
 
 def _to_loaded(q: Question) -> LoadedQuestion:

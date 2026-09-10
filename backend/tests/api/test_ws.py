@@ -117,8 +117,14 @@ def test_ping_pong_offset_handshake(client: TestClient) -> None:
 
 
 def test_full_game_over_real_sockets(client: TestClient) -> None:
-    """Two clients play both rounds to game over. Placeholder prompts name
-    their own correct option, so we answer deliberately from the wire data."""
+    """Two clients play both rounds to game over.
+
+    Neither client can know the answer in advance — that is R-12 holding on
+    the wire, so the test cannot cheat either. Both pick blind, on different
+    options, and the reveal frame (the only frame that ever carries the key)
+    is what the assertions are built from. The payoff is that this checks the
+    loop against itself rather than against a fact about the question bank.
+    """
     code = make_room(client)
     with (
         client.websocket_connect(f"/ws/rooms/{code}") as ws1,
@@ -127,36 +133,47 @@ def test_full_game_over_real_sockets(client: TestClient) -> None:
         send(ws1, type="join", name="aoi")
         recv_until(ws1, "snapshot")
         send(ws2, type="join", name="ren")
-        recv_until(ws2, "snapshot")
+        seats = {p["name"]: p["id"] for p in recv_until(ws2, "snapshot")["data"]["players"]}
 
         send(ws1, type="start_game", mode_id=1)
+        running = {pid: 0 for pid in seats.values()}
         for round_no in range(2):
             q1 = recv_until(ws1, "question")
             q2 = recv_until(ws2, "question")
             assert q1["data"]["question_id"] == q2["data"]["question_id"]
             assert "correct" not in json.dumps(q1["data"])  # R-12 on the wire
 
-            # "pick option B." -> the option whose label ends with that letter.
-            prompt: str = q1["data"]["prompt"]
-            letter = prompt.rstrip(".").split()[-1]
-            correct_id = next(o["id"] for o in q1["data"]["options"] if o["label"].endswith(letter))
-            wrong_id = next(o["id"] for o in q1["data"]["options"] if o["id"] != correct_id)
-
+            options = q1["data"]["options"]
             seq = q1["data"]["round_seq"]
-            send(ws1, type="submit_answer", round_seq=seq, option_id=correct_id, cid=f"c{round_no}")
+            send(
+                ws1,
+                type="submit_answer",
+                round_seq=seq,
+                option_id=options[0]["id"],
+                cid=f"c{round_no}",
+            )
             ack = recv_until(ws1, "answer_ack")
             assert ack["data"]["cid"] == f"c{round_no}"
-            send(ws2, type="submit_answer", round_seq=seq, option_id=wrong_id)
+            send(ws2, type="submit_answer", round_seq=seq, option_id=options[1]["id"])
 
             reveal = recv_until(ws2, "reveal")
-            assert reveal["data"]["correct_option_id"] == correct_id
+            correct_id = reveal["data"]["correct_option_id"]
+            assert correct_id in {o["id"] for o in options}
             results = {r["player_id"]: r for r in reveal["data"]["results"]}
-            assert sum(1 for r in results.values() if r["correct"]) == 1
+            # Two players on two different options: at most one can be right,
+            # and "correct" must agree with the key rather than be asserted
+            # separately from it.
+            assert sum(1 for r in results.values() if r["correct"]) <= 1
+            for result in results.values():
+                assert result["correct"] == (result["option_id"] == correct_id)
+                assert (result["delta"] > 0) == result["correct"]
+                running[result["player_id"]] += result["delta"]
 
         over = recv_until(ws1, "game_over")
         standings = over["data"]["standings"]
-        assert standings[0]["name"] == "aoi"  # two correct answers beat zero
-        assert standings[0]["score"] > standings[1]["score"] == 0
+        assert {s["player_id"]: s["score"] for s in standings} == running
+        # Ranking is by score descending (§07), whoever happened to guess well.
+        assert [s["score"] for s in standings] == sorted(running.values(), reverse=True)
 
 
 def test_disconnect_mid_round_greys_player_and_game_continues(client: TestClient) -> None:

@@ -1,184 +1,891 @@
 {
-  "_comment": "Placeholder bank - each prompt names its own correct option so mechanics can be tested deliberately. Real question bank replaces this in M4.",
+  "_comment": "Ten questions per genre tag, which is exactly the 2x margin check_mode_margins demands of a five-question mode — miscount one tag and the seed import fails loudly rather than dealing a thin deck at runtime. The correct index is spread across all four positions on purpose: a bank that always answers A teaches players to answer A. Difficulty 1-3 as the schema's check constraint requires.",
   "questions": [
     {
       "id": 1,
       "kind": "text",
-      "prompt": "Placeholder Q1 (difficulty 1): pick option A.",
+      "prompt": "Which hidden village is Naruto Uzumaki from?",
       "difficulty": 1,
-      "options": [
-        "Option A",
-        "Option B",
-        "Option C",
-        "Option D"
-      ],
-      "correct": 0,
-      "series": null,
-      "tags": [
-        "placeholder"
-      ],
+      "options": ["Hidden Sand Village", "Hidden Leaf Village", "Hidden Mist Village", "Hidden Cloud Village"],
+      "correct": 1,
+      "series": "naruto",
+      "tags": ["shonen"],
       "media": null
     },
     {
       "id": 2,
       "kind": "text",
-      "prompt": "Placeholder Q2 (difficulty 1): pick option C.",
+      "prompt": "What is Monkey D. Luffy's crew called?",
       "difficulty": 1,
-      "options": [
-        "Option A",
-        "Option B",
-        "Option C",
-        "Option D"
-      ],
-      "correct": 2,
-      "series": null,
-      "tags": [
-        "placeholder"
-      ],
+      "options": ["The Straw Hat Pirates", "The Red Hair Pirates", "The Heart Pirates", "The Whitebeard Pirates"],
+      "correct": 0,
+      "series": "one-piece",
+      "tags": ["shonen"],
       "media": null
     },
     {
       "id": 3,
       "kind": "text",
-      "prompt": "Placeholder Q3 (difficulty 1): pick option D.",
+      "prompt": "In Dragon Ball, what is Goku's Saiyan birth name?",
       "difficulty": 1,
-      "options": [
-        "Option A",
-        "Option B",
-        "Option C",
-        "Option D"
-      ],
-      "correct": 3,
-      "series": null,
-      "tags": [
-        "placeholder"
-      ],
+      "options": ["Raditz", "Bardock", "Kakarot", "Turles"],
+      "correct": 2,
+      "series": "dragon-ball",
+      "tags": ["shonen"],
       "media": null
     },
     {
       "id": 4,
       "kind": "text",
-      "prompt": "Placeholder Q4 (difficulty 1): pick option B.",
-      "difficulty": 1,
-      "options": [
-        "Option A",
-        "Option B",
-        "Option C",
-        "Option D"
-      ],
-      "correct": 1,
-      "series": null,
-      "tags": [
-        "placeholder"
-      ],
+      "prompt": "In Bleach, what is the name of Ichigo Kurosaki's zanpakuto?",
+      "difficulty": 2,
+      "options": ["Senbonzakura", "Hyorinmaru", "Ryujin Jakka", "Zangetsu"],
+      "correct": 3,
+      "series": "bleach",
+      "tags": ["shonen"],
       "media": null
     },
     {
       "id": 5,
       "kind": "text",
-      "prompt": "Placeholder Q5 (difficulty 2): pick option B.",
-      "difficulty": 2,
-      "options": [
-        "Option A",
-        "Option B",
-        "Option C",
-        "Option D"
-      ],
-      "correct": 1,
-      "series": null,
-      "tags": [
-        "placeholder"
-      ],
+      "prompt": "In My Hero Academia, which quirk does All Might pass to Izuku Midoriya?",
+      "difficulty": 1,
+      "options": ["One For All", "All For One", "Explosion", "Half-Cold Half-Hot"],
+      "correct": 0,
+      "series": "my-hero-academia",
+      "tags": ["shonen"],
       "media": null
     },
     {
       "id": 6,
       "kind": "text",
-      "prompt": "Placeholder Q6 (difficulty 2): pick option D.",
-      "difficulty": 2,
-      "options": [
-        "Option A",
-        "Option B",
-        "Option C",
-        "Option D"
-      ],
-      "correct": 3,
-      "series": null,
-      "tags": [
-        "placeholder"
-      ],
+      "prompt": "In Demon Slayer, which breathing style does Tanjiro learn first?",
+      "difficulty": 1,
+      "options": ["Flame Breathing", "Thunder Breathing", "Water Breathing", "Insect Breathing"],
+      "correct": 2,
+      "series": "demon-slayer",
+      "tags": ["shonen"],
       "media": null
     },
     {
       "id": 7,
       "kind": "text",
-      "prompt": "Placeholder Q7 (difficulty 2): pick option A.",
-      "difficulty": 2,
-      "options": [
-        "Option A",
-        "Option B",
-        "Option C",
-        "Option D"
-      ],
-      "correct": 0,
-      "series": null,
-      "tags": [
-        "placeholder"
-      ],
+      "prompt": "In Jujutsu Kaisen, whose finger does Yuji Itadori swallow?",
+      "difficulty": 1,
+      "options": ["Mahito", "Ryomen Sukuna", "Jogo", "Kenjaku"],
+      "correct": 1,
+      "series": "jujutsu-kaisen",
+      "tags": ["shonen"],
       "media": null
     },
     {
       "id": 8,
       "kind": "text",
-      "prompt": "Placeholder Q8 (difficulty 3): pick option C.",
-      "difficulty": 3,
-      "options": [
-        "Option A",
-        "Option B",
-        "Option C",
-        "Option D"
-      ],
-      "correct": 2,
-      "series": null,
-      "tags": [
-        "placeholder"
-      ],
+      "prompt": "In Hunter x Hunter, which Nen category is Gon Freecss?",
+      "difficulty": 2,
+      "options": ["Emitter", "Manipulator", "Conjurer", "Enhancer"],
+      "correct": 3,
+      "series": "hunter-x-hunter",
+      "tags": ["shonen"],
       "media": null
     },
     {
       "id": 9,
       "kind": "text",
-      "prompt": "Placeholder Q9 (difficulty 3): pick option A.",
+      "prompt": "In Fullmetal Alchemist, which limb does Edward Elric lose in the human transmutation itself?",
       "difficulty": 3,
-      "options": [
-        "Option A",
-        "Option B",
-        "Option C",
-        "Option D"
-      ],
+      "options": ["His left leg", "His right arm", "Both legs", "His left arm"],
       "correct": 0,
-      "series": null,
-      "tags": [
-        "placeholder"
-      ],
+      "series": "fullmetal-alchemist",
+      "tags": ["shonen"],
       "media": null
     },
     {
       "id": 10,
       "kind": "text",
-      "prompt": "Placeholder Q10 (difficulty 3): pick option D.",
+      "prompt": "In Attack on Titan, which of the three walls is the outermost?",
+      "difficulty": 2,
+      "options": ["Wall Sina", "Wall Rose", "Wall Maria", "Wall Shiganshina"],
+      "correct": 2,
+      "series": "attack-on-titan",
+      "tags": ["shonen"],
+      "media": null
+    },
+
+    {
+      "id": 11,
+      "kind": "text",
+      "prompt": "In Fruits Basket, which animal does Kyo Sohma turn into?",
+      "difficulty": 1,
+      "options": ["The Rat", "The Dog", "The Cat", "The Tiger"],
+      "correct": 2,
+      "series": "fruits-basket",
+      "tags": ["shoujo"],
+      "media": null
+    },
+    {
+      "id": 12,
+      "kind": "text",
+      "prompt": "What is Sailor Moon's civilian name?",
+      "difficulty": 1,
+      "options": ["Usagi Tsukino", "Ami Mizuno", "Rei Hino", "Minako Aino"],
+      "correct": 0,
+      "series": "sailor-moon",
+      "tags": ["shoujo"],
+      "media": null
+    },
+    {
+      "id": 13,
+      "kind": "text",
+      "prompt": "In Ouran High School Host Club, why does Haruhi join the club?",
+      "difficulty": 1,
+      "options": ["To find her mother", "To repay a broken vase", "To win a scholarship", "To impress Tamaki"],
+      "correct": 1,
+      "series": "ouran-high-school-host-club",
+      "tags": ["shoujo"],
+      "media": null
+    },
+    {
+      "id": 14,
+      "kind": "text",
+      "prompt": "In Cardcaptor Sakura, what are the magical cards originally called?",
+      "difficulty": 1,
+      "options": ["Sakura Cards", "Star Cards", "Clow Cards", "Seal Cards"],
+      "correct": 2,
+      "series": "cardcaptor-sakura",
+      "tags": ["shoujo"],
+      "media": null
+    },
+    {
+      "id": 15,
+      "kind": "text",
+      "prompt": "In Kimi ni Todoke, what nickname do classmates give Sawako Kuronuma?",
+      "difficulty": 2,
+      "options": ["Sadako", "Kuro", "Shadow", "Yuki"],
+      "correct": 0,
+      "series": "kimi-ni-todoke",
+      "tags": ["shoujo"],
+      "media": null
+    },
+    {
+      "id": 16,
+      "kind": "text",
+      "prompt": "NANA follows two young women who share which first name?",
+      "difficulty": 1,
+      "options": ["Hachi", "Nana", "Reira", "Junko"],
+      "correct": 1,
+      "series": "nana",
+      "tags": ["shoujo"],
+      "media": null
+    },
+    {
+      "id": 17,
+      "kind": "text",
+      "prompt": "In Yona of the Dawn, Yona is princess of which kingdom?",
       "difficulty": 3,
-      "options": [
-        "Option A",
-        "Option B",
-        "Option C",
-        "Option D"
-      ],
+      "options": ["Xing", "Sei", "Kai", "Kouka"],
       "correct": 3,
-      "series": null,
-      "tags": [
-        "placeholder"
-      ],
+      "series": "yona-of-the-dawn",
+      "tags": ["shoujo"],
+      "media": null
+    },
+    {
+      "id": 18,
+      "kind": "text",
+      "prompt": "In Skip Beat!, which industry does Kyoko Mogami enter to get revenge?",
+      "difficulty": 2,
+      "options": ["Show business", "Fashion", "Professional cooking", "Publishing"],
+      "correct": 0,
+      "series": "skip-beat",
+      "tags": ["shoujo"],
+      "media": null
+    },
+    {
+      "id": 19,
+      "kind": "text",
+      "prompt": "In Maid Sama!, where does student council president Misaki Ayuzawa secretly work?",
+      "difficulty": 1,
+      "options": ["A bookshop", "A ramen stall", "A maid cafe", "A flower shop"],
+      "correct": 2,
+      "series": "maid-sama",
+      "tags": ["shoujo"],
+      "media": null
+    },
+    {
+      "id": 20,
+      "kind": "text",
+      "prompt": "In Vampire Knight, which school does Yuki Cross attend?",
+      "difficulty": 2,
+      "options": ["Night Academy", "Cross Academy", "Kuran Academy", "Moon Academy"],
+      "correct": 1,
+      "series": "vampire-knight",
+      "tags": ["shoujo"],
+      "media": null
+    },
+
+    {
+      "id": 21,
+      "kind": "text",
+      "prompt": "In Berserk, what is the name of Guts's enormous sword?",
+      "difficulty": 2,
+      "options": ["Dragonslayer", "Godhand", "Behelit", "Ironmace"],
+      "correct": 0,
+      "series": "berserk",
+      "tags": ["seinen"],
+      "media": null
+    },
+    {
+      "id": 22,
+      "kind": "text",
+      "prompt": "Naoki Urasawa's Monster is set mainly in which country?",
+      "difficulty": 2,
+      "options": ["Austria", "Germany", "Switzerland", "Poland"],
+      "correct": 1,
+      "series": "monster",
+      "tags": ["seinen"],
+      "media": null
+    },
+    {
+      "id": 23,
+      "kind": "text",
+      "prompt": "In Vinland Saga, Thorfinn is the son of which warrior?",
+      "difficulty": 2,
+      "options": ["Askeladd", "Floki", "Thors", "Thorkell"],
+      "correct": 2,
+      "series": "vinland-saga",
+      "tags": ["seinen"],
+      "media": null
+    },
+    {
+      "id": 24,
+      "kind": "text",
+      "prompt": "In Ghost in the Shell, which unit does Motoko Kusanagi lead?",
+      "difficulty": 2,
+      "options": ["Section 6", "Unit 01", "Division 3", "Section 9"],
+      "correct": 3,
+      "series": "ghost-in-the-shell",
+      "tags": ["seinen"],
+      "media": null
+    },
+    {
+      "id": 25,
+      "kind": "text",
+      "prompt": "Akira takes place in which fictional city?",
+      "difficulty": 1,
+      "options": ["Neo-Tokyo", "Midgar", "Neo-Osaka", "Tokyo-3"],
+      "correct": 0,
+      "series": "akira",
+      "tags": ["seinen"],
+      "media": null
+    },
+    {
+      "id": 26,
+      "kind": "text",
+      "prompt": "In Tokyo Ghoul, what is the name of the coffee shop staffed by ghouls?",
+      "difficulty": 2,
+      "options": ["Re:", "Anteiku", "Helter Skelter", "Kamii"],
+      "correct": 1,
+      "series": "tokyo-ghoul",
+      "tags": ["seinen"],
+      "media": null
+    },
+    {
+      "id": 27,
+      "kind": "text",
+      "prompt": "In Parasyte, what does Shinichi name the creature in his right hand?",
+      "difficulty": 1,
+      "options": ["Hidari", "Kana", "Migi", "Reiko"],
+      "correct": 2,
+      "series": "parasyte",
+      "tags": ["seinen"],
+      "media": null
+    },
+    {
+      "id": 28,
+      "kind": "text",
+      "prompt": "Golden Kamuy is set largely on which Japanese island?",
+      "difficulty": 2,
+      "options": ["Kyushu", "Shikoku", "Honshu", "Hokkaido"],
+      "correct": 3,
+      "series": "golden-kamuy",
+      "tags": ["seinen"],
+      "media": null
+    },
+    {
+      "id": 29,
+      "kind": "text",
+      "prompt": "Kingdom is set during which period of Chinese history?",
+      "difficulty": 3,
+      "options": ["The Warring States period", "The Three Kingdoms period", "The Han dynasty", "The Tang dynasty"],
+      "correct": 0,
+      "series": "kingdom",
+      "tags": ["seinen"],
+      "media": null
+    },
+    {
+      "id": 30,
+      "kind": "text",
+      "prompt": "Vagabond retells the life of which historical swordsman?",
+      "difficulty": 2,
+      "options": ["Sasaki Kojiro", "Miyamoto Musashi", "Yagyu Munenori", "Hattori Hanzo"],
+      "correct": 1,
+      "series": "vagabond",
+      "tags": ["seinen"],
+      "media": null
+    },
+
+    {
+      "id": 31,
+      "kind": "text",
+      "prompt": "In Barakamon, what is Seishuu Handa's profession?",
+      "difficulty": 2,
+      "options": ["Novelist", "Potter", "Calligrapher", "Painter"],
+      "correct": 2,
+      "series": "barakamon",
+      "tags": ["slice-of-life"],
+      "media": null
+    },
+    {
+      "id": 32,
+      "kind": "text",
+      "prompt": "In K-On!, which instrument does Yui Hirasawa play?",
+      "difficulty": 1,
+      "options": ["Guitar", "Drums", "Bass", "Keyboard"],
+      "correct": 0,
+      "series": "k-on",
+      "tags": ["slice-of-life"],
+      "media": null
+    },
+    {
+      "id": 33,
+      "kind": "text",
+      "prompt": "In Nichijou, what is the name of the robot girl the Professor lives with?",
+      "difficulty": 2,
+      "options": ["Mio", "Yuuko", "Nano", "Mai"],
+      "correct": 2,
+      "series": "nichijou",
+      "tags": ["slice-of-life"],
+      "media": null
+    },
+    {
+      "id": 34,
+      "kind": "text",
+      "prompt": "In March Comes in Like a Lion, which game does Rei Kiriyama play professionally?",
+      "difficulty": 1,
+      "options": ["Go", "Shogi", "Mahjong", "Chess"],
+      "correct": 1,
+      "series": "march-comes-in-like-a-lion",
+      "tags": ["slice-of-life"],
+      "media": null
+    },
+    {
+      "id": 35,
+      "kind": "text",
+      "prompt": "In Usagi Drop, what is the name of the girl Daikichi takes in?",
+      "difficulty": 2,
+      "options": ["Kouki", "Yukari", "Rin", "Masako"],
+      "correct": 2,
+      "series": "usagi-drop",
+      "tags": ["slice-of-life"],
+      "media": null
+    },
+    {
+      "id": 36,
+      "kind": "text",
+      "prompt": "Silver Spoon is set at what kind of school?",
+      "difficulty": 1,
+      "options": ["An art school", "A music school", "A military academy", "An agricultural school"],
+      "correct": 3,
+      "series": "silver-spoon",
+      "tags": ["slice-of-life"],
+      "media": null
+    },
+    {
+      "id": 37,
+      "kind": "text",
+      "prompt": "In Laid-Back Camp, which mountain do the girls keep camping in view of?",
+      "difficulty": 1,
+      "options": ["Mount Fuji", "Mount Aso", "Mount Hotaka", "Mount Tate"],
+      "correct": 0,
+      "series": "laid-back-camp",
+      "tags": ["slice-of-life"],
+      "media": null
+    },
+    {
+      "id": 38,
+      "kind": "text",
+      "prompt": "In Aria, the city of Neo-Venezia sits on which terraformed planet?",
+      "difficulty": 3,
+      "options": ["Venus", "Europa", "Mars", "Titan"],
+      "correct": 2,
+      "series": "aria",
+      "tags": ["slice-of-life"],
+      "media": null
+    },
+    {
+      "id": 39,
+      "kind": "text",
+      "prompt": "In Non Non Biyori, how many students attend the village school?",
+      "difficulty": 3,
+      "options": ["Three", "Five", "Eight", "Twelve"],
+      "correct": 1,
+      "series": "non-non-biyori",
+      "tags": ["slice-of-life"],
+      "media": null
+    },
+    {
+      "id": 40,
+      "kind": "text",
+      "prompt": "In Azumanga Daioh, why is Chiyo Mihama unusual among her classmates?",
+      "difficulty": 2,
+      "options": ["She is a transfer student from abroad", "She is a child prodigy who skipped years", "She is a professional athlete", "She is the teacher's daughter"],
+      "correct": 1,
+      "series": "azumanga-daioh",
+      "tags": ["slice-of-life"],
+      "media": null
+    },
+
+    {
+      "id": 41,
+      "kind": "text",
+      "prompt": "In Toradora!, what is Taiga Aisaka's nickname?",
+      "difficulty": 1,
+      "options": ["Pocket Dragon", "Palmtop Tiger", "Tiny Tiger", "Handheld Dragon"],
+      "correct": 1,
+      "series": "toradora",
+      "tags": ["romance"],
+      "media": null
+    },
+    {
+      "id": 42,
+      "kind": "text",
+      "prompt": "In Your Lie in April, which instrument does Kaori Miyazono play?",
+      "difficulty": 1,
+      "options": ["Piano", "Cello", "Violin", "Flute"],
+      "correct": 2,
+      "series": "your-lie-in-april",
+      "tags": ["romance"],
+      "media": null
+    },
+    {
+      "id": 43,
+      "kind": "text",
+      "prompt": "In Clannad, what is the name of the girl Tomoya meets at the bottom of the hill?",
+      "difficulty": 2,
+      "options": ["Kyou Fujibayashi", "Nagisa Furukawa", "Tomoyo Sakagami", "Kotomi Ichinose"],
+      "correct": 1,
+      "series": "clannad",
+      "tags": ["romance"],
+      "media": null
+    },
+    {
+      "id": 44,
+      "kind": "text",
+      "prompt": "In Horimiya, what is Izumi Miyamura hiding under his uniform?",
+      "difficulty": 1,
+      "options": ["Scars from a fight", "Piercings and tattoos", "A part-time job badge", "A family crest"],
+      "correct": 1,
+      "series": "horimiya",
+      "tags": ["romance"],
+      "media": null
+    },
+    {
+      "id": 45,
+      "kind": "text",
+      "prompt": "In Kaguya-sama: Love Is War, which academy do Kaguya and Miyuki attend?",
+      "difficulty": 2,
+      "options": ["Shuchiin Academy", "Hakuo Academy", "Ouran Academy", "Seika Academy"],
+      "correct": 0,
+      "series": "kaguya-sama",
+      "tags": ["romance"],
+      "media": null
+    },
+    {
+      "id": 46,
+      "kind": "text",
+      "prompt": "In My Dress-Up Darling, what is Wakana Gojo skilled at making?",
+      "difficulty": 1,
+      "options": ["Cosplay wigs", "Stage props", "Hina dolls", "Leather bags"],
+      "correct": 2,
+      "series": "my-dress-up-darling",
+      "tags": ["romance"],
+      "media": null
+    },
+    {
+      "id": 47,
+      "kind": "text",
+      "prompt": "In Rascal Does Not Dream of Bunny Girl Senpai, what is the strange phenomenon called?",
+      "difficulty": 2,
+      "options": ["Puberty Syndrome", "Bunny Syndrome", "Quantum Drift", "Adolescence Effect"],
+      "correct": 0,
+      "series": "rascal-does-not-dream",
+      "tags": ["romance"],
+      "media": null
+    },
+    {
+      "id": 48,
+      "kind": "text",
+      "prompt": "In Golden Time, what condition does Banri Tada live with?",
+      "difficulty": 2,
+      "options": ["Insomnia", "Colour blindness", "Amnesia", "Narcolepsy"],
+      "correct": 2,
+      "series": "golden-time",
+      "tags": ["romance"],
+      "media": null
+    },
+    {
+      "id": 49,
+      "kind": "text",
+      "prompt": "In Ao Haru Ride, what does Kou change between middle school and high school?",
+      "difficulty": 3,
+      "options": ["His school", "His surname", "His hair colour", "His hometown"],
+      "correct": 1,
+      "series": "ao-haru-ride",
+      "tags": ["romance"],
+      "media": null
+    },
+    {
+      "id": 50,
+      "kind": "text",
+      "prompt": "In Tsuki ga Kirei, which author's writing does Kotaro admire?",
+      "difficulty": 3,
+      "options": ["Yukio Mishima", "Osamu Dazai", "Natsume Soseki", "Ryunosuke Akutagawa"],
+      "correct": 2,
+      "series": "tsuki-ga-kirei",
+      "tags": ["romance"],
+      "media": null
+    },
+
+    {
+      "id": 51,
+      "kind": "text",
+      "prompt": "In Re:Zero, what is Subaru Natsuki's ability called?",
+      "difficulty": 1,
+      "options": ["Return by Death", "Second Chance", "Loop Sight", "Death Recall"],
+      "correct": 0,
+      "series": "re-zero",
+      "tags": ["isekai"],
+      "media": null
+    },
+    {
+      "id": 52,
+      "kind": "text",
+      "prompt": "In KonoSuba, which goddess does Kazuma drag into the other world with him?",
+      "difficulty": 1,
+      "options": ["Eris", "Wiz", "Aqua", "Chris"],
+      "correct": 2,
+      "series": "konosuba",
+      "tags": ["isekai"],
+      "media": null
+    },
+    {
+      "id": 53,
+      "kind": "text",
+      "prompt": "In Overlord, what was the name of the guild Momonga led?",
+      "difficulty": 2,
+      "options": ["Nazarick", "Ainz Ooal Gown", "Yggdrasil", "Pleiades"],
+      "correct": 1,
+      "series": "overlord",
+      "tags": ["isekai"],
+      "media": null
+    },
+    {
+      "id": 54,
+      "kind": "text",
+      "prompt": "In Mushoku Tensei, what is the protagonist called after being reborn?",
+      "difficulty": 1,
+      "options": ["Roxy Migurdia", "Zenith Greyrat", "Rudeus Greyrat", "Paul Greyrat"],
+      "correct": 2,
+      "series": "mushoku-tensei",
+      "tags": ["isekai"],
+      "media": null
+    },
+    {
+      "id": 55,
+      "kind": "text",
+      "prompt": "In That Time I Got Reincarnated as a Slime, what was Rimuru's name as a human?",
+      "difficulty": 2,
+      "options": ["Satoru Mikami", "Shizue Izawa", "Masayuki Honjou", "Yuuki Kagurazaka"],
+      "correct": 0,
+      "series": "tensura",
+      "tags": ["isekai"],
+      "media": null
+    },
+    {
+      "id": 56,
+      "kind": "text",
+      "prompt": "In Sword Art Online, what is Kirito's real name?",
+      "difficulty": 2,
+      "options": ["Ryotaro Tsuboi", "Kazuto Kirigaya", "Andrew Gilbert Mills", "Shinichi Nagata"],
+      "correct": 1,
+      "series": "sword-art-online",
+      "tags": ["isekai"],
+      "media": null
+    },
+    {
+      "id": 57,
+      "kind": "text",
+      "prompt": "In The Rising of the Shield Hero, which weapon is Naofumi bound to?",
+      "difficulty": 1,
+      "options": ["A spear", "A bow", "A sword", "A shield"],
+      "correct": 3,
+      "series": "shield-hero",
+      "tags": ["isekai"],
+      "media": null
+    },
+    {
+      "id": 58,
+      "kind": "text",
+      "prompt": "In No Game No Life, what are the two step-siblings called?",
+      "difficulty": 1,
+      "options": ["Sora and Shiro", "Kuro and Sora", "Shiro and Steph", "Jibril and Sora"],
+      "correct": 0,
+      "series": "no-game-no-life",
+      "tags": ["isekai"],
+      "media": null
+    },
+    {
+      "id": 59,
+      "kind": "text",
+      "prompt": "In Ascendance of a Bookworm, what does Myne set out to create in her new world?",
+      "difficulty": 1,
+      "options": ["A library card", "Books", "A printing guild uniform", "A paper mill"],
+      "correct": 1,
+      "series": "ascendance-of-a-bookworm",
+      "tags": ["isekai"],
+      "media": null
+    },
+    {
+      "id": 60,
+      "kind": "text",
+      "prompt": "In Log Horizon, which game are the players trapped inside?",
+      "difficulty": 3,
+      "options": ["Elder Tale", "Yggdrasil", "Crossreverie", "Aincrad Online"],
+      "correct": 0,
+      "series": "log-horizon",
+      "tags": ["isekai"],
+      "media": null
+    },
+
+    {
+      "id": 61,
+      "kind": "text",
+      "prompt": "In Gintama, what is Gintoki Sakata's odd-jobs business called?",
+      "difficulty": 2,
+      "options": ["Shinsengumi", "Yorozuya", "Joui", "Kabukicho"],
+      "correct": 1,
+      "series": "gintama",
+      "tags": ["comedy"],
+      "media": null
+    },
+    {
+      "id": 62,
+      "kind": "text",
+      "prompt": "In Grand Blue, which university club do Iori and Kohei actually belong to?",
+      "difficulty": 1,
+      "options": ["The surfing club", "The swimming club", "The diving club", "The sailing club"],
+      "correct": 2,
+      "series": "grand-blue",
+      "tags": ["comedy"],
+      "media": null
+    },
+    {
+      "id": 63,
+      "kind": "text",
+      "prompt": "In The Disastrous Life of Saiki K., what is Kusuo Saiki?",
+      "difficulty": 1,
+      "options": ["A time traveller", "An alien", "A powerful psychic", "A vampire"],
+      "correct": 2,
+      "series": "saiki-k",
+      "tags": ["comedy"],
+      "media": null
+    },
+    {
+      "id": 64,
+      "kind": "text",
+      "prompt": "In One Punch Man, what is Saitama's registered hero name?",
+      "difficulty": 2,
+      "options": ["Caped Baldy", "Bald Cape", "One Punch", "Mister Bald"],
+      "correct": 0,
+      "series": "one-punch-man",
+      "tags": ["comedy"],
+      "media": null
+    },
+    {
+      "id": 65,
+      "kind": "text",
+      "prompt": "In Osomatsu-san, how many brothers are there?",
+      "difficulty": 2,
+      "options": ["Four", "Five", "Six", "Seven"],
+      "correct": 2,
+      "series": "osomatsu-san",
+      "tags": ["comedy"],
+      "media": null
+    },
+    {
+      "id": 66,
+      "kind": "text",
+      "prompt": "In Great Teacher Onizuka, what was Eikichi Onizuka before he became a teacher?",
+      "difficulty": 2,
+      "options": ["A pro wrestler", "A biker gang member", "A police officer", "A host club owner"],
+      "correct": 1,
+      "series": "gto",
+      "tags": ["comedy"],
+      "media": null
+    },
+    {
+      "id": 67,
+      "kind": "text",
+      "prompt": "In Asobi Asobase, what is the club the three girls form built around?",
+      "difficulty": 3,
+      "options": ["Cooking", "Board games and pastimes", "Astronomy", "Gardening"],
+      "correct": 1,
+      "series": "asobi-asobase",
+      "tags": ["comedy"],
+      "media": null
+    },
+    {
+      "id": 68,
+      "kind": "text",
+      "prompt": "In Hinamatsuri, what power does Hina have?",
+      "difficulty": 2,
+      "options": ["Invisibility", "Time travel", "Psychokinesis", "Shapeshifting"],
+      "correct": 2,
+      "series": "hinamatsuri",
+      "tags": ["comedy"],
+      "media": null
+    },
+    {
+      "id": 69,
+      "kind": "text",
+      "prompt": "In Nozaki-kun, what does Umetaro Nozaki secretly do for a living?",
+      "difficulty": 3,
+      "options": ["He draws a shoujo manga", "He writes light novels", "He models", "He composes idol songs"],
+      "correct": 0,
+      "series": "nozaki-kun",
+      "tags": ["comedy"],
+      "media": null
+    },
+    {
+      "id": 70,
+      "kind": "text",
+      "prompt": "In Sakamoto desu ga?, what is Sakamoto known throughout the school for?",
+      "difficulty": 3,
+      "options": ["Being enormously strong", "Being effortlessly cool at everything", "Never speaking", "Being a delinquent"],
+      "correct": 1,
+      "series": "sakamoto-desu-ga",
+      "tags": ["comedy"],
+      "media": null
+    },
+
+    {
+      "id": 71,
+      "kind": "text",
+      "prompt": "In Frieren: Beyond Journey's End, what race is Frieren?",
+      "difficulty": 1,
+      "options": ["Human", "Dwarf", "Elf", "Demon"],
+      "correct": 2,
+      "series": "frieren",
+      "tags": ["fantasy"],
+      "media": null
+    },
+    {
+      "id": 72,
+      "kind": "text",
+      "prompt": "In Made in Abyss, what is the enormous pit at the centre of the story called?",
+      "difficulty": 1,
+      "options": ["The Abyss", "The Hollow", "The Deep", "The Maw"],
+      "correct": 0,
+      "series": "made-in-abyss",
+      "tags": ["fantasy"],
+      "media": null
+    },
+    {
+      "id": 73,
+      "kind": "text",
+      "prompt": "In Magi, what are the mysterious towers full of treasure called?",
+      "difficulty": 2,
+      "options": ["Spires", "Labyrinths", "Dungeons", "Vaults"],
+      "correct": 2,
+      "series": "magi",
+      "tags": ["fantasy"],
+      "media": null
+    },
+    {
+      "id": 74,
+      "kind": "text",
+      "prompt": "In Fairy Tail, what kind of magic does Natsu Dragneel use?",
+      "difficulty": 1,
+      "options": ["Ice Make magic", "Celestial Spirit magic", "Requip magic", "Fire Dragon Slayer magic"],
+      "correct": 3,
+      "series": "fairy-tail",
+      "tags": ["fantasy"],
+      "media": null
+    },
+    {
+      "id": 75,
+      "kind": "text",
+      "prompt": "In Black Clover, what makes Asta unusual?",
+      "difficulty": 1,
+      "options": ["He was born a noble", "He has no magic power at all", "He is the Wizard King's son", "He can copy any spell"],
+      "correct": 1,
+      "series": "black-clover",
+      "tags": ["fantasy"],
+      "media": null
+    },
+    {
+      "id": 76,
+      "kind": "text",
+      "prompt": "In The Ancient Magus' Bride, what does Elias Ainsworth have for a head?",
+      "difficulty": 2,
+      "options": ["A lantern", "A wolf's head", "An animal skull with horns", "A mask of glass"],
+      "correct": 2,
+      "series": "ancient-magus-bride",
+      "tags": ["fantasy"],
+      "media": null
+    },
+    {
+      "id": 77,
+      "kind": "text",
+      "prompt": "In Princess Mononoke, what animals raised San?",
+      "difficulty": 1,
+      "options": ["Boars", "Wolves", "Apes", "Deer"],
+      "correct": 1,
+      "series": "princess-mononoke",
+      "tags": ["fantasy"],
+      "media": null
+    },
+    {
+      "id": 78,
+      "kind": "text",
+      "prompt": "In Spirited Away, what new name does Yubaba give Chihiro?",
+      "difficulty": 1,
+      "options": ["Rin", "Haku", "Sen", "Yu"],
+      "correct": 2,
+      "series": "spirited-away",
+      "tags": ["fantasy"],
+      "media": null
+    },
+    {
+      "id": 79,
+      "kind": "text",
+      "prompt": "In Howl's Moving Castle, what curse is placed on Sophie?",
+      "difficulty": 1,
+      "options": ["She is turned into an old woman", "She loses her voice", "She cannot leave the castle", "She forgets her own name"],
+      "correct": 0,
+      "series": "howls-moving-castle",
+      "tags": ["fantasy"],
+      "media": null
+    },
+    {
+      "id": 80,
+      "kind": "text",
+      "prompt": "In Delicious in Dungeon, what is unusual about Laios's party?",
+      "difficulty": 1,
+      "options": ["They never fight monsters", "They cook and eat the monsters", "They refuse to use magic", "They explore only at night"],
+      "correct": 1,
+      "series": "delicious-in-dungeon",
+      "tags": ["fantasy"],
       "media": null
     }
   ]

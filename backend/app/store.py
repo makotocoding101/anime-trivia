@@ -43,6 +43,29 @@ class StandingRow:
 
 
 @dataclass(slots=True, frozen=True)
+class WalletRow:
+    """One player's standing in the currency system. `name` is the last
+    display spelling seen; the identity is the normalised key (economy.
+    wallet_key), which is not shown because it is not what anyone typed."""
+
+    name: str
+    coins: int
+    games_played: int
+    wins: int
+    best_score: int
+    lifetime_score: int
+
+
+@dataclass(slots=True, frozen=True)
+class RankRow:
+    """A wallet plus its position in the global table. Rank is assigned by
+    the query, not stored — it changes whenever anybody else plays."""
+
+    rank: int
+    wallet: WalletRow
+
+
+@dataclass(slots=True, frozen=True)
 class GameRecord:
     """Everything the room layer hands over at game end — one INSERT batch."""
 
@@ -62,6 +85,12 @@ class GameStore(Protocol):
     async def load_deck(self, mode_id: int) -> tuple[tuple[LoadedQuestion, ...], GameConfig]: ...
 
     async def record_game(self, record: GameRecord) -> None: ...
+
+    # Currency reads. Outside the round loop entirely — these are menu-screen
+    # queries, so they break no part of the data-model boundary (spec §06).
+    async def list_rankings(self, limit: int = 50) -> list[RankRow]: ...
+
+    async def get_wallet(self, name: str) -> WalletRow | None: ...
 
 
 class SeedStore:
@@ -96,3 +125,9 @@ class SeedStore:
 
     async def record_game(self, record: GameRecord) -> None:
         return None  # nowhere durable to put it — by design
+
+    async def list_rankings(self, limit: int = 50) -> list[RankRow]:
+        return []  # no history without a database, so no table to rank
+
+    async def get_wallet(self, name: str) -> WalletRow | None:
+        return None

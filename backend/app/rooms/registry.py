@@ -14,6 +14,7 @@ from typing import Protocol
 from app.game.clock import Clock
 from app.game.errors import GameError
 from app.game.events import Command
+from app.game.state import ConnState, Phase
 from app.rooms.room import RECONNECT_GRACE_S, Room
 from app.store import GameStore
 
@@ -87,6 +88,27 @@ class InProcessRegistry:
         tasks = [t for room in self._rooms.values() for t in room._persist_tasks]
         if tasks:
             await asyncio.gather(*tasks, return_exceptions=True)
+
+    def stats(self) -> tuple[int, int, int]:
+        """(open rooms, games in progress, players connected) for the menu
+        screen's live counter.
+
+        Reads in-memory state with no await, so it is a consistent snapshot by
+        the same argument invariant 2 makes about transition(): nothing can
+        interleave partway through and leave the three numbers describing
+        different moments.
+
+        These counts are this process only. That is exactly right today —
+        invariant 7 means this process IS the deployment — and it is the first
+        thing that would have to move behind the RoomRegistry protocol if the
+        Redis implementation ever lands.
+        """
+        rooms = [r for r in self._rooms.values() if not r.stopped]
+        in_progress = sum(1 for r in rooms if r.state.phase not in (Phase.LOBBY, Phase.GAME_OVER))
+        players = sum(
+            1 for r in rooms for p in r.state.players.values() if p.conn is ConnState.LIVE
+        )
+        return len(rooms), in_progress, players
 
     def _forget(self, room: Room) -> None:
         if self._rooms.get(room.code) is room:

@@ -83,18 +83,26 @@ def test_fresh_join_issues_a_session(client: TestClient, stack: ExitStack) -> No
 
 
 def test_resume_restores_seat_score_and_view(client: TestClient, stack: ExitStack) -> None:
+    """The invariant is preservation, not magnitude.
+
+    Both players answer blind — R-12 keeps the key off the question frame, so
+    the test has no way to guarantee a correct guess, and arranging one would
+    mean asserting something about the question bank instead of about resume.
+    The reveal reports what the round was actually worth, and reconnecting has
+    to hand back exactly that, on the same seat.
+    """
     code = make_room(client)
     ws1, pid1, token1 = join(stack, client, code, "aoi")
     ws2, _, _ = join(stack, client, code, "ren")
 
-    # Play the first round so there is a score to keep.
+    # Play the first round so there is state to keep.
     send(ws1, type="start_game", mode_id=1)
     q = recv_until(ws1, "question")
-    letter = q["data"]["prompt"].rstrip(".").split()[-1]
-    correct = next(o["id"] for o in q["data"]["options"] if o["label"].endswith(letter))
-    send(ws1, type="submit_answer", round_seq=q["data"]["round_seq"], option_id=correct)
-    send(ws2, type="submit_answer", round_seq=q["data"]["round_seq"], option_id=correct)
-    recv_until(ws1, "reveal")
+    options = q["data"]["options"]
+    send(ws1, type="submit_answer", round_seq=q["data"]["round_seq"], option_id=options[0]["id"])
+    send(ws2, type="submit_answer", round_seq=q["data"]["round_seq"], option_id=options[1]["id"])
+    reveal = recv_until(ws1, "reveal")
+    scored = next(r for r in reveal["data"]["results"] if r["player_id"] == pid1)
 
     ws1.close()  # the laptop lid, mid-game
     left = recv_until(ws2, "player_left")
@@ -105,7 +113,7 @@ def test_resume_restores_seat_score_and_view(client: TestClient, stack: ExitStac
     snap = recv_until(ws1b, "snapshot")
     assert snap["data"]["you"] == pid1  # same seat, not a new player
     me = next(p for p in snap["data"]["players"] if p["id"] == pid1)
-    assert me["score"] > 0  # the round played before the drop still counts
+    assert me["score"] == scored["score"]  # the round survived the drop intact
     assert me["conn"] == "LIVE"
     back = recv_until(ws2, "player_reconnected")
     assert back["data"]["player_id"] == pid1

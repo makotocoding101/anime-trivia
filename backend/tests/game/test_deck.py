@@ -26,7 +26,9 @@ def mutate(mutation) -> str:
 
 def test_real_seed_file_is_valid() -> None:
     questions = load_questions(SEED_PATH)
-    assert len(questions) == 10
+    # A floor, not an equality: the bank is content and grows. What has to
+    # hold is that every entry loads and is well formed.
+    assert len(questions) >= 40
     for q in questions:
         assert q.kind == "text"
         assert 1 <= q.difficulty <= 3
@@ -51,8 +53,8 @@ def test_sampling_is_without_replacement_and_deterministic() -> None:  # R-15
 
 def test_sampling_more_than_available_raises() -> None:
     questions = load_questions(SEED_PATH)
-    with pytest.raises(SeedError, match="only 10 match"):
-        sample_deck(questions, 11, random.Random(0))
+    with pytest.raises(SeedError, match=f"only {len(questions)} match"):
+        sample_deck(questions, len(questions) + 1, random.Random(0))
 
 
 def test_audio_kind_rejected_as_out_of_scope() -> None:

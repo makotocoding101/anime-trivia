@@ -142,6 +142,37 @@ class GamePlayer(Base):
     total_elapsed_ms: Mapped[int] = mapped_column(Integer)
 
 
+class PlayerWallet(Base):
+    """The currency ledger, and the only table here that is not write-once.
+
+    v1 has no accounts, so this hangs on a normalised display name
+    (app.game.economy.wallet_key) rather than a user id. That is the whole
+    identity model: anyone who types an existing name plays as that wallet.
+    It is stated rather than hidden because the alternative — accounts — is
+    explicitly out of scope for v1.
+
+    Totals are stored rather than aggregated from game_player on every read.
+    Rankings are the hottest read in the app and would otherwise be a
+    GROUP BY over all history; the write side is already inside the single
+    end-of-game transaction, so keeping them current costs nothing extra.
+    """
+
+    __tablename__ = "player_wallet"
+    __table_args__ = (
+        # The rankings query, and the only reason this index exists.
+        Index("ix_wallet_coins", text("coins DESC")),
+    )
+
+    name_key: Mapped[str] = mapped_column(Text, primary_key=True)
+    display_name: Mapped[str] = mapped_column(Text)
+    coins: Mapped[int] = mapped_column(BigInteger, default=0)
+    games_played: Mapped[int] = mapped_column(Integer, default=0)
+    wins: Mapped[int] = mapped_column(Integer, default=0)
+    best_score: Mapped[int] = mapped_column(Integer, default=0)
+    lifetime_score: Mapped[int] = mapped_column(BigInteger, default=0)
+    updated_at: Mapped[datetime.datetime] = mapped_column(DateTime(timezone=True))
+
+
 class GameAnswer(Base):
     __tablename__ = "game_answer"
 
