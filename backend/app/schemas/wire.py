@@ -56,6 +56,9 @@ class JoinFrame(_Frame):
     type: Literal["join"]
     name: str = Field(min_length=1, max_length=24)
     token: str | None = Field(default=None, max_length=128)  # resume credential (§08)
+    #: Proof of name ownership, from /api/account/session. Required only for
+    #: names somebody has claimed; unclaimed names stay open to anyone.
+    name_token: str | None = Field(default=None, max_length=256)
 
 
 class StartGameFrame(_Frame):

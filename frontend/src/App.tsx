@@ -7,7 +7,7 @@ import { HomeScreen, loadWallet } from "./components/HomeScreen";
 import { LobbyScreen } from "./components/LobbyScreen";
 import { ProfileScreen } from "./components/ProfileScreen";
 import { RankingsScreen } from "./components/RankingsScreen";
-import { loadName, type Wallet } from "./net/menu";
+import { clearNameToken, loadName, loadNameToken, type Wallet } from "./net/menu";
 import { createRoom, RoomSocket, type SocketStatus } from "./net/socket";
 import { useRoomStore } from "./store/room";
 import { avatarFor } from "./ui/identity";
@@ -38,6 +38,7 @@ export function App() {
   const [status, setStatus] = useState<SocketStatus | "idle">("idle");
   const [joinError, setJoinError] = useState<string | null>(null);
   const [name, setName] = useState(loadName);
+  const [nameToken, setNameToken] = useState(loadNameToken);
   const [wallet, setWallet] = useState<Wallet | null>(null);
   const [menu, setMenu] = useState<MenuView>("home");
   const [pendingModeId, setPendingModeId] = useState<number | null>(null);
@@ -68,14 +69,31 @@ export function App() {
     (code: string, playerName: string) => {
       reset();
       setJoinError(null);
-      const socket = new RoomSocket(code.toUpperCase(), playerName, {
-        onFrame: dispatchFrame,
-        onStatus: setStatus,
-      });
+      const socket = new RoomSocket(
+        code.toUpperCase(),
+        playerName,
+        {
+          onFrame: dispatchFrame,
+          onStatus: setStatus,
+          onFatal: (reason) => {
+            if (reason === "name_taken") {
+              // The stored token is for a different name, or there is none.
+              // Either way it will not open this door; drop it so the next
+              // attempt shows the sign-in form rather than failing again.
+              clearNameToken();
+              setNameToken(null);
+              setJoinError(
+                "that name is claimed by someone else — sign in with its passphrase, or pick another",
+              );
+            }
+          },
+        },
+        nameToken,
+      );
       socketRef.current = socket;
       socket.connect();
     },
-    [dispatchFrame, reset],
+    [dispatchFrame, reset, nameToken],
   );
 
   const handlePlay = useCallback(
@@ -135,7 +153,10 @@ export function App() {
       <div className="app">
         <HomeScreen
           name={name}
-          onNameChange={setName}
+          onNameChange={(next, token) => {
+            setName(next);
+            setNameToken(token);
+          }}
           wallet={wallet}
           onPlay={handlePlay}
           onJoin={handleJoin}

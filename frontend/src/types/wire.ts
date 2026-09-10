@@ -144,7 +144,7 @@ export const TARGETED_TYPES: ReadonlySet<string> = new Set([
 ]);
 
 export type ClientFrame =
-  | { type: "join"; name: string; token?: string }
+  | { type: "join"; name: string; token?: string; name_token?: string }
   | { type: "start_game"; mode_id: number }
   | { type: "submit_answer"; round_seq: number; option_id: number; cid?: string }
   | { type: "set_ready"; ready: boolean }

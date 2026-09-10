@@ -14,7 +14,8 @@ import uuid
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
-from app.api.auth import mint_token, verify_token
+from app.api.auth import mint_token, verify_name_token, verify_token
+from app.game.economy import wallet_key
 from app.game.errors import GameError
 from app.game.events import (
     Command,
@@ -51,6 +52,27 @@ from app.schemas.wire import (
 from app.store import GameStore
 
 logger = logging.getLogger(__name__)
+
+
+async def _may_use_name(store: GameStore, name: str, name_token: str | None, secret: str) -> bool:
+    """Whether this socket is allowed to play under this name.
+
+    An unclaimed name is open to anyone; a claimed one needs a token minted
+    by /api/account/session for that same normalised name.
+
+    The store read happens here, in the socket handler, before anything is
+    put on the room's inbox — so the room task is never the thing waiting on
+    Postgres. That is what keeps this off the timing-critical path (spec §06)
+    even though a player may join in the middle of a live game.
+    """
+    account = await store.get_account(name)
+    if account is None:
+        return True
+    if name_token is None:
+        return False
+    return verify_name_token(name_token, secret) == wallet_key(name)
+
+
 router = APIRouter()
 
 
@@ -94,6 +116,17 @@ async def ws_room(websocket: WebSocket) -> None:
     else:
         player_id = str(uuid.uuid4())
 
+    # Before attaching, so a refusal has nothing to unwind: an attached
+    # connection is already the room's business and taking it back would need
+    # a second round trip through the actor.
+    name = first.name.strip()
+    if not resuming and not await _may_use_name(
+        websocket.app.state.store, name, first.name_token, secret
+    ):
+        await websocket.send_text(error_frame("name_taken"))
+        await websocket.close(code=4403, reason="name_taken")
+        return
+
     conn = Connection(player_id, websocket)
     try:
         room.attach(conn)  # a takeover replaces any zombie socket for this id
@@ -102,10 +135,12 @@ async def ws_room(websocket: WebSocket) -> None:
         await websocket.close(code=4404, reason="room_not_found")
         return
     if resuming:
+        # No name is supplied on a resume — the seat already has one, and the
+        # resume token is what proves the claim to it.
         room.inbox.put_nowait(ReconnectPlayer(player_id=player_id))
     else:
         conn.try_send(session_frame(player_id, mint_token(player_id, secret), room.state.seq))
-        room.inbox.put_nowait(Join(player_id=player_id, name=first.name.strip()))
+        room.inbox.put_nowait(Join(player_id=player_id, name=name))
 
     try:
         while True:

@@ -1,10 +1,14 @@
 import { useEffect, useState, type CSSProperties } from "react";
 
 import {
+  AccountError,
+  claimOrSignIn,
   fetchModes,
+  fetchNameStatus,
   fetchProfile,
   fetchStats,
   saveName,
+  saveNameToken,
   type Mode,
   type Stats,
   type Wallet,
@@ -13,7 +17,7 @@ import { avatarFor, hueForIndex, iconForMode } from "../ui/identity";
 
 interface Props {
   name: string;
-  onNameChange: (name: string) => void;
+  onNameChange: (name: string, nameToken: string | null) => void;
   wallet: Wallet | null;
   /** Start a room already set to this mode; the host can still change it. */
   onPlay: (modeId: number) => void;
@@ -40,7 +44,12 @@ export function HomeScreen({
   const [stats, setStats] = useState<Stats | null>(null);
   const [code, setCode] = useState("");
   const [draft, setDraft] = useState(name);
+  const [passphrase, setPassphrase] = useState("");
   const [editing, setEditing] = useState(name === "");
+  //: null while unknown — the button says "continue" until the server answers.
+  const [taken, setTaken] = useState<boolean | null>(null);
+  const [authError, setAuthError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -70,13 +79,55 @@ export function HomeScreen({
   }, []);
 
   const named = name.trim().length > 0;
+  const trimmedDraft = draft.trim();
 
-  const commitName = () => {
-    const trimmed = draft.trim();
-    if (trimmed === "") return;
-    saveName(trimmed);
-    onNameChange(trimmed);
-    setEditing(false);
+  // Ask whether the name is spoken for, so the form can say "claim" or "sign
+  // in" before anyone types a passphrase. Debounced, and the answer is only
+  // a label — the server decides for real when the form is submitted.
+  useEffect(() => {
+    if (!editing || trimmedDraft === "") {
+      setTaken(null);
+      return;
+    }
+    let cancelled = false;
+    const timer = window.setTimeout(() => {
+      fetchNameStatus(trimmedDraft)
+        .then((s) => !cancelled && setTaken(s.claimed))
+        .catch(() => !cancelled && setTaken(null));
+    }, 350);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [editing, trimmedDraft]);
+
+  const commitName = async () => {
+    if (trimmedDraft === "" || busy) return;
+    setBusy(true);
+    setAuthError(null);
+    try {
+      const session = await claimOrSignIn(trimmedDraft, passphrase);
+      saveName(session.name);
+      saveNameToken(session.token);
+      onNameChange(session.name, session.token);
+      setPassphrase("");
+      setEditing(false);
+    } catch (err) {
+      if (err instanceof AccountError && err.reason === "unavailable") {
+        // No database behind this server, so no name can be claimed and none
+        // is taken. Playing unclaimed is the honest fallback, not an error.
+        saveName(trimmedDraft);
+        onNameChange(trimmedDraft, null);
+        setPassphrase("");
+        setEditing(false);
+      } else if (err instanceof AccountError && err.reason === "wrong_passphrase") {
+        setAuthError("that name belongs to someone else — wrong passphrase");
+      } else {
+        setAuthError("couldn't reach the server — is it running?");
+      }
+    } finally {
+      setBusy(false);
+    }
   };
 
   return (
@@ -107,26 +158,52 @@ export function HomeScreen({
           className="namebar"
           onSubmit={(e) => {
             e.preventDefault();
-            commitName();
+            void commitName();
           }}
         >
           <label className="label" htmlFor="name">
             what should we call you?
           </label>
+          <input
+            id="name"
+            value={draft}
+            maxLength={24}
+            autoFocus
+            autoComplete="off"
+            placeholder="your name"
+            onChange={(e) => setDraft(e.target.value)}
+          />
+
+          <label className="label" htmlFor="passphrase">
+            passphrase
+            {taken === true && " — this name is taken, sign in to use it"}
+            {taken === false && " — free; pick one to claim this name"}
+          </label>
           <div className="code-row">
             <input
-              id="name"
-              value={draft}
-              maxLength={24}
-              autoFocus
-              autoComplete="off"
-              placeholder="your name"
-              onChange={(e) => setDraft(e.target.value)}
+              id="passphrase"
+              type="password"
+              value={passphrase}
+              minLength={6}
+              maxLength={128}
+              autoComplete="current-password"
+              placeholder="at least 6 characters"
+              onChange={(e) => setPassphrase(e.target.value)}
             />
-            <button type="submit" disabled={draft.trim() === ""}>
-              continue
+            <button type="submit" disabled={trimmedDraft === "" || passphrase.length < 6 || busy}>
+              {busy ? "…" : taken === true ? "sign in" : "claim"}
             </button>
           </div>
+
+          {authError !== null && (
+            <p className="formerror" role="alert">
+              {authError}
+            </p>
+          )}
+          <p className="muted hint">
+            Your name is yours once claimed — nobody else can play as you. There
+            is no reset, so pick something you will remember.
+          </p>
         </form>
       ) : (
         <div className="whoami wide">

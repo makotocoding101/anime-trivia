@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Query, Request
-from pydantic import BaseModel
+from fastapi import APIRouter, HTTPException, Query, Request
+from pydantic import BaseModel, Field
 
-from app.game.economy import next_tier, rank_tier
+from app.api.auth import hash_password, mint_name_token, verify_password
+from app.game.economy import next_tier, rank_tier, wallet_key
 from app.store import WalletRow
 
 router = APIRouter(prefix="/api")
@@ -57,6 +58,26 @@ class Wallet(BaseModel):
 class Ranked(BaseModel):
     rank: int
     wallet: Wallet
+
+
+class NameStatus(BaseModel):
+    name: str
+    claimed: bool
+
+
+class SessionRequest(BaseModel):
+    name: str = Field(min_length=1, max_length=24)
+    # Six is a floor, not security theatre: this passphrase guards a place on
+    # a leaderboard, and there is no reset path, so a long requirement would
+    # mostly generate forgotten names.
+    password: str = Field(min_length=6, max_length=128)
+
+
+class SessionResponse(BaseModel):
+    name: str
+    token: str
+    #: True when this request is what created the account.
+    claimed: bool
 
 
 @router.post("/rooms", response_model=RoomCreated, status_code=201)
@@ -125,6 +146,49 @@ def _wallet(row: WalletRow) -> Wallet:
         tier=rank_tier(row.coins),
         next_tier=None if upcoming is None else upcoming[0],
         coins_to_next=None if upcoming is None else upcoming[1],
+    )
+
+
+@router.get("/account/{name}", response_model=NameStatus)
+async def account_status(request: Request, name: str) -> NameStatus:
+    """Whether a name is spoken for, so the form can say "claim" or "sign in"
+    before anybody types a passphrase. Deliberately reveals only that — the
+    same thing anyone learns by trying to claim it."""
+    account = await request.app.state.store.get_account(name)
+    return NameStatus(name=name, claimed=account is not None)
+
+
+@router.post("/account/session", response_model=SessionResponse)
+async def account_session(request: Request, body: SessionRequest) -> SessionResponse:
+    """Claim a free name, or sign in to one already held.
+
+    One endpoint rather than two because the client cannot be trusted to know
+    which case it is in: between a status check and a submit, somebody else
+    may have claimed the name. The server decides on the evidence in front of
+    it, and the race is settled inside claim_account.
+    """
+    store = request.app.state.store
+    secret: str = request.app.state.session_secret
+    name = " ".join(body.name.split())
+    if name == "":
+        raise HTTPException(status_code=422, detail="empty_name")
+
+    existing = await store.get_account(name)
+    if existing is None:
+        if await store.claim_account(name, hash_password(body.password)):
+            return SessionResponse(
+                name=name, token=mint_name_token(wallet_key(name), secret), claimed=True
+            )
+        # Lost the race between the read and the insert; fall through and
+        # treat it as a sign-in attempt, which is what it now is.
+        existing = await store.get_account(name)
+        if existing is None:
+            raise HTTPException(status_code=503, detail="accounts_unavailable")
+
+    if not verify_password(body.password, existing.password_hash):
+        raise HTTPException(status_code=401, detail="wrong_passphrase")
+    return SessionResponse(
+        name=existing.name, token=mint_name_token(wallet_key(name), secret), claimed=False
     )
 
 

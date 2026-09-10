@@ -8,6 +8,7 @@ results. The round loop never sees this module.
 from __future__ import annotations
 
 import dataclasses
+import datetime
 import logging
 
 from sqlalchemy import distinct, func, select
@@ -25,6 +26,7 @@ from app.db.models import (
     GameAnswer,
     GameMode,
     GamePlayer,
+    PlayerAccount,
     PlayerWallet,
     Question,
     QuestionTag,
@@ -32,7 +34,7 @@ from app.db.models import (
 from app.game.economy import coins_awarded, wallet_key
 from app.game.errors import GameError
 from app.game.state import GameConfig, LoadedQuestion, Option
-from app.store import GameRecord, ModeInfo, RankRow, WalletRow
+from app.store import AccountRow, GameRecord, ModeInfo, RankRow, WalletRow
 
 logger = logging.getLogger(__name__)
 
@@ -224,6 +226,35 @@ class DbStore:
         async with self._session() as session:
             row = await session.get(PlayerWallet, wallet_key(name))
         return None if row is None else _to_wallet(row)
+
+    async def get_account(self, name: str) -> AccountRow | None:
+        async with self._session() as session:
+            row = await session.get(PlayerAccount, wallet_key(name))
+        return None if row is None else AccountRow(row.display_name, row.password_hash)
+
+    async def claim_account(self, name: str, password_hash: str) -> bool:
+        """True if this call is the one that claimed the name.
+
+        ON CONFLICT DO NOTHING ... RETURNING rather than SELECT-then-INSERT:
+        two people racing for the same free name must not both be told they
+        got it, and the check-then-write version has a window between the two
+        statements wide enough to lose that race. The unique index decides,
+        and the empty RETURNING is how the loser finds out.
+        """
+        stmt = (
+            pg_insert(PlayerAccount)
+            .values(
+                name_key=wallet_key(name),
+                display_name=name,
+                password_hash=password_hash,
+                created_at=datetime.datetime.now(datetime.UTC),
+            )
+            .on_conflict_do_nothing(index_elements=[PlayerAccount.name_key])
+            .returning(PlayerAccount.name_key)
+        )
+        async with self._session() as session, session.begin():
+            claimed = (await session.execute(stmt)).scalar_one_or_none()
+        return claimed is not None
 
 
 def _to_wallet(w: PlayerWallet) -> WalletRow:

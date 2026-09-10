@@ -142,6 +142,29 @@ class GamePlayer(Base):
     total_elapsed_ms: Mapped[int] = mapped_column(Integer)
 
 
+class PlayerAccount(Base):
+    """Name ownership.
+
+    Separate from PlayerWallet even though both key on the same normalised
+    name, because they have different lifecycles: a wallet appears the first
+    time a game is recorded, an account the moment someone claims the name.
+    A name can have either without the other — an unclaimed name that has
+    played games, or a claimed name that has not played one yet.
+
+    Claiming is what stops a player wearing somebody else's identity. It is
+    not full accounts (no email, so no recovery): lose the passphrase and the
+    name is gone. That is the honest cost of adding ownership without adding
+    an identity provider.
+    """
+
+    __tablename__ = "player_account"
+
+    name_key: Mapped[str] = mapped_column(Text, primary_key=True)
+    display_name: Mapped[str] = mapped_column(Text)
+    password_hash: Mapped[str] = mapped_column(Text)
+    created_at: Mapped[datetime.datetime] = mapped_column(DateTime(timezone=True))
+
+
 class PlayerWallet(Base):
     """The currency ledger, and the only table here that is not write-once.
 

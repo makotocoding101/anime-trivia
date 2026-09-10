@@ -103,3 +103,75 @@ export function saveName(name: string): void {
     /* the name simply is not remembered next visit */
   }
 }
+
+/* --- name ownership ------------------------------------------------------
+ *
+ * A claimed name needs a token to play under. The token is minted by the
+ * server and held here; it is not a password and carries no secret beyond
+ * the right to use one name.
+ */
+
+export interface NameStatus {
+  name: string;
+  claimed: boolean;
+}
+
+export interface NameSession {
+  name: string;
+  token: string;
+  /** True when this call is what created the account. */
+  claimed: boolean;
+}
+
+/** Thrown with a machine-readable reason the UI turns into a sentence. */
+export class AccountError extends Error {
+  constructor(readonly reason: "wrong_passphrase" | "unavailable" | "failed") {
+    super(reason);
+  }
+}
+
+export const fetchNameStatus = (name: string): Promise<NameStatus> =>
+  getJson<NameStatus>(`/api/account/${encodeURIComponent(name)}`);
+
+/**
+ * Claim a free name, or sign in to one already held. One call, because
+ * between checking and submitting somebody else may have claimed it — the
+ * server decides on the evidence in front of it.
+ */
+export async function claimOrSignIn(name: string, password: string): Promise<NameSession> {
+  const response = await fetch(apiUrl("/api/account/session"), {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ name, password }),
+  });
+  if (response.status === 401) throw new AccountError("wrong_passphrase");
+  if (response.status === 503) throw new AccountError("unavailable");
+  if (!response.ok) throw new AccountError("failed");
+  return (await response.json()) as NameSession;
+}
+
+const TOKEN_KEY = "otakizu:name-token";
+
+export function loadNameToken(): string | null {
+  try {
+    return window.localStorage.getItem(TOKEN_KEY);
+  } catch {
+    return null;
+  }
+}
+
+export function saveNameToken(token: string): void {
+  try {
+    window.localStorage.setItem(TOKEN_KEY, token);
+  } catch {
+    /* the name will need signing in to again next visit */
+  }
+}
+
+export function clearNameToken(): void {
+  try {
+    window.localStorage.removeItem(TOKEN_KEY);
+  } catch {
+    /* nothing to clear as far as we can tell */
+  }
+}

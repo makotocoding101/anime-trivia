@@ -57,6 +57,12 @@ class WalletRow:
 
 
 @dataclass(slots=True, frozen=True)
+class AccountRow:
+    name: str
+    password_hash: str
+
+
+@dataclass(slots=True, frozen=True)
 class RankRow:
     """A wallet plus its position in the global table. Rank is assigned by
     the query, not stored — it changes whenever anybody else plays."""
@@ -91,6 +97,11 @@ class GameStore(Protocol):
     async def list_rankings(self, limit: int = 50) -> list[RankRow]: ...
 
     async def get_wallet(self, name: str) -> WalletRow | None: ...
+
+    # Name ownership.
+    async def get_account(self, name: str) -> AccountRow | None: ...
+
+    async def claim_account(self, name: str, password_hash: str) -> bool: ...
 
 
 class SeedStore:
@@ -131,3 +142,9 @@ class SeedStore:
 
     async def get_wallet(self, name: str) -> WalletRow | None:
         return None
+
+    async def get_account(self, name: str) -> AccountRow | None:
+        return None  # nowhere to claim a name, so no name is ever taken
+
+    async def claim_account(self, name: str, password_hash: str) -> bool:
+        return False

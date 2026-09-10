@@ -19,7 +19,9 @@ const HANDSHAKE_PINGS = 3;
 
 /** Close codes that mean "do not come back": left, kicked, no such room,
  * room swept. Everything else is presumed transient and retried. */
-const FATAL_CLOSE_CODES = new Set([4000, 4002, 4404, 4004]);
+// 4403 is a refused name: retrying cannot change the answer, so it belongs
+// here with the other closes that must not be reconnected.
+const FATAL_CLOSE_CODES = new Set([4000, 4002, 4004, 4403, 4404]);
 
 /** Close reasons that mean the stored token is dead — clear it and the next
  * attempt joins fresh (new seat) instead of retrying a doomed resume. */
@@ -41,6 +43,9 @@ export function backoffDelayMs(attempt: number, rand: () => number = Math.random
 export interface RoomSocketHandlers {
   onFrame: (frame: ServerFrame) => void;
   onStatus: (status: SocketStatus) => void;
+  /** A close this socket will not retry, with the server's reason — the UI
+   * needs it to say why, since "closed" alone reads as a network blip. */
+  onFatal?: (reason: string) => void;
 }
 
 export class RoomSocket {
@@ -55,6 +60,10 @@ export class RoomSocket {
     private readonly code: string,
     private readonly name: string,
     private readonly handlers: RoomSocketHandlers,
+    /** Proof of name ownership, when the name has been claimed. Sent on
+     * every join, including reconnects: the server may have been restarted
+     * and will re-check. */
+    private readonly nameToken: string | null = null,
   ) {}
 
   connect(): void {
@@ -68,11 +77,12 @@ export class RoomSocket {
     this.ws.onopen = () => {
       this.attempt = 0;
       const saved = loadSession(this.storage, this.code);
-      this.send(
-        saved !== null
-          ? { type: "join", name: this.name, token: saved.token }
-          : { type: "join", name: this.name },
-      );
+      this.send({
+        type: "join",
+        name: this.name,
+        ...(saved !== null ? { token: saved.token } : {}),
+        ...(this.nameToken !== null ? { name_token: this.nameToken } : {}),
+      });
       for (let i = 0; i < HANDSHAKE_PINGS; i++) {
         // Staggered so the samples see independent network moments; rerun on
         // every (re)connect since the offset may have changed with the path.
@@ -105,6 +115,7 @@ export class RoomSocket {
       }
       if (FATAL_CLOSE_CODES.has(event.code)) {
         this.handlers.onStatus("closed");
+        this.handlers.onFatal?.(event.reason);
         return;
       }
       this.scheduleReconnect();

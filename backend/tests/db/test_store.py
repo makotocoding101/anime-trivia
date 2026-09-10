@@ -230,9 +230,6 @@ def test_full_game_lands_in_postgres(migrated_db: str) -> None:
             client.websocket_connect(f"/ws/rooms/{code}") as ws1,
             client.websocket_connect(f"/ws/rooms/{code}") as ws2,
         ):
-            for ws, name in ((ws1, "aoi"), (ws2, "ren")):
-                ws.send_text(json.dumps({"type": "join", "name": name}))
-            ws1.send_text(json.dumps({"type": "start_game", "mode_id": mode["id"]}))
 
             def pump(ws, type_):
                 for _ in range(80):
@@ -240,6 +237,16 @@ def test_full_game_lands_in_postgres(migrated_db: str) -> None:
                     if frame["type"] == type_:
                         return frame
                 raise AssertionError(f"no {type_} frame")
+
+            # Wait for each snapshot before starting. Connecting only enqueues
+            # a join on the room's inbox, and the handler now takes a database
+            # round trip on the way (the name-ownership check), so firing
+            # start_game straight after the joins can beat the second player
+            # into the room and leave them spectating round one.
+            for ws, name in ((ws1, "aoi"), (ws2, "ren")):
+                ws.send_text(json.dumps({"type": "join", "name": name}))
+                pump(ws, "snapshot")
+            ws1.send_text(json.dumps({"type": "start_game", "mode_id": mode["id"]}))
 
             # Real questions do not name their own answer — that is R-12
             # working. So both players pick blind and the reveal frame, which
@@ -380,3 +387,38 @@ async def test_rankings_respect_the_limit(store: DbStore) -> None:
         _record(deck[0].id, deck[0].correct_option_id, "wal-lim-a", "wal-lim-b")
     )
     assert len(await store.list_rankings(limit=1)) == 1
+
+
+# --- name ownership ------------------------------------------------------
+
+
+async def test_claiming_a_free_name_succeeds_once(store: DbStore) -> None:
+    assert await store.claim_account("acct-fresh", "hash-a") is True
+    # The second attempt is somebody else arriving at a name already held.
+    assert await store.claim_account("acct-fresh", "hash-b") is False
+    account = await store.get_account("acct-fresh")
+    assert account is not None and account.password_hash == "hash-a"
+
+
+async def test_the_account_is_reached_by_normalised_name(store: DbStore) -> None:
+    await store.claim_account("Acct-Case", "hash")
+    for spelling in ("acct-case", "ACCT-CASE", "  Acct-Case  "):
+        assert await store.get_account(spelling) is not None
+    # ...and claiming a differently-spelled version of a held name fails.
+    assert await store.claim_account("ACCT-CASE", "other") is False
+
+
+async def test_an_unclaimed_name_has_no_account(store: DbStore) -> None:
+    assert await store.get_account("acct-nobody-claimed-this") is None
+
+
+async def test_a_wallet_can_exist_without_an_account(store: DbStore) -> None:
+    """The two tables have different lifecycles on purpose: a name that has
+    played games but was never claimed still has coins, and is still free for
+    someone to claim."""
+    deck, _ = await store.load_deck(1)
+    await store.record_game(
+        _record(deck[0].id, deck[0].correct_option_id, "acct-walletonly", "acct-other")
+    )
+    assert await store.get_wallet("acct-walletonly") is not None
+    assert await store.get_account("acct-walletonly") is None
