@@ -13,7 +13,10 @@ silently — staleness is expected, not exceptional (R-03).
 
 from __future__ import annotations
 
+import dataclasses
+
 from app.game import scoring
+from app.game.economy import coins_awarded
 from app.game.errors import GameError
 from app.game.events import (
     AnswerAck,
@@ -500,7 +503,7 @@ def _on_reveal_elapsed(state: RoomState, cmd: RevealElapsed, now: float) -> list
     state.phase_deadline = None
     return [
         PhaseChanged(phase=state.phase, round_seq=state.round_seq, round_index=state.round_index),
-        GameOver(standings=_scoreboard(state).rows),
+        GameOver(standings=_final_standings(state)),
     ]
 
 
@@ -515,6 +518,29 @@ def _require_host(state: RoomState, player_id: PlayerId) -> None:
         raise GameError("not_in_room")
     if not player.is_host:
         raise GameError("not_host")
+
+
+def _final_standings(state: RoomState) -> list[ScoreboardRow]:
+    """The closing scoreboard, with what each place actually paid.
+
+    Computed here from economy.coins_awarded — the same function the store
+    credits wallets with — so the number a player is shown and the number
+    their balance moves by cannot drift apart. The client is never asked to
+    reimplement the payout table.
+    """
+    rows = _scoreboard(state).rows
+    player_count = len(rows)
+    return [
+        dataclasses.replace(
+            row,
+            coins_earned=coins_awarded(
+                final_score=row.score,
+                final_rank=row.rank,
+                player_count=player_count,
+            ),
+        )
+        for row in rows
+    ]
 
 
 def _scoreboard(state: RoomState) -> Scoreboard:

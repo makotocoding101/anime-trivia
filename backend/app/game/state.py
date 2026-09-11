@@ -21,7 +21,9 @@ class Phase(Enum):
     INTRO = auto()  # fixed-length breather; media preload slot (§02)
     QUESTION_OPEN = auto()  # the only phase that accepts answers
     LOCKED = auto()  # scores commit here; never dwelled (see transition)
-    REVEAL = auto()  # the only phase whose events carry the answer key
+    # The only phase whose events carry the answer key — otherwise the
+    # players would cheat.
+    REVEAL = auto()
     GAME_OVER = auto()
 
 

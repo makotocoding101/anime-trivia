@@ -197,11 +197,15 @@ export function App() {
               </span>
             </span>
           )}
+          {/* Points, not coins — deliberately not the gold coin pill. Score
+              is this game only; coins are the lifetime balance you convert
+              it into at the end. Showing both in the same component made
+              players think their points had been taken away. */}
           {me !== null && view.phase !== "LOBBY" && (
-            <span className="coin">
-              <span aria-hidden="true">🪙</span>
+            <span className="scorepill">
               <span className="sr-only">your score: </span>
               {me.score}
+              <em>pts</em>
             </span>
           )}
 

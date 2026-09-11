@@ -1571,3 +1571,58 @@ input:focus {
   font-size: 12px;
   line-height: 1.5;
 }
+
+/* --------------------------------------------------- points vs coins -- */
+
+/* The in-game score. Deliberately NOT the gold coin pill: points are this
+   game only, coins are the lifetime balance. Giving them the same treatment
+   made players think their score had been converted away mid-game. */
+.scorepill {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 5px;
+  padding: 5px 13px;
+  border-radius: var(--radius-pill);
+  border: 1px solid rgb(167 139 250 / 0.4);
+  background: var(--accent-soft);
+  color: var(--ink);
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.scorepill em {
+  font-style: normal;
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--accent-bright);
+}
+
+/* The moment the conversion is explained. */
+.payout {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--s2);
+  text-align: center;
+  padding: var(--s5) var(--s4);
+  border-radius: var(--radius-xl);
+  border: 1px solid rgb(251 191 36 / 0.35);
+  background: var(--gold-soft);
+}
+.payout .amount {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: clamp(30px, 6vw, 42px);
+  letter-spacing: -0.02em;
+  color: var(--gold);
+  font-variant-numeric: tabular-nums;
+}
+.payout p {
+  max-width: 46ch;
+  font-size: 13px;
+  line-height: 1.55;
+}

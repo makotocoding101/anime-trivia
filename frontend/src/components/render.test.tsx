@@ -310,3 +310,35 @@ describe("ProfileScreen", () => {
     expect(html).not.toContain('class="meter"');
   });
 });
+
+describe("points versus coins", () => {
+  const base = {
+    phase: "GAME_OVER" as const,
+    players: [player("p0", { name: "aoi", score: 500, is_host: true })],
+  };
+
+  it("explains the conversion using the server's figure", () => {
+    const view = playing({
+      ...base,
+      standings: [
+        { rank: 1, player_id: "p0", name: "aoi", score: 500, streak: 2, coins_earned: 85 },
+      ],
+    });
+    const html = renderToStaticMarkup(<GameOverScreen view={view} socket={socket} />);
+    expect(html).toContain("+85");
+    expect(html).toContain("500 points");
+    expect(html).toContain("coins are your permanent balance");
+  });
+
+  it("says nothing about coins when the server sent no payout", () => {
+    // Older frames, or any path where the award is absent: silence beats a
+    // guess, because recomputing the table here is how the number shown and
+    // the number credited drift apart.
+    const view = playing({
+      ...base,
+      standings: [{ rank: 1, player_id: "p0", name: "aoi", score: 500, streak: 2 }],
+    });
+    const html = renderToStaticMarkup(<GameOverScreen view={view} socket={socket} />);
+    expect(html).not.toContain("coins earned");
+  });
+});

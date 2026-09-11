@@ -301,6 +301,10 @@ def _rows(rows: list[ScoreboardRow]) -> list[dict[str, object]]:
             "name": r.name,
             "score": r.score,
             "streak": r.streak,
+            # Omitted entirely mid-game rather than sent as 0: a client
+            # rendering "+0 coins" after every round would be wrong, and a
+            # missing key is harder to misread than a zero.
+            **({} if r.coins_earned is None else {"coins_earned": r.coins_earned}),
         }
         for r in rows
     ]

@@ -218,6 +218,10 @@ class ScoreboardRow:
     name: str
     score: int
     streak: int
+    #: Coins this game paid out, set only on the final standings. None on a
+    #: mid-game scoreboard, because nothing has been earned yet — distinct
+    #: from 0, which means "the game ended and this player earned nothing".
+    coins_earned: int | None = None
 
 
 @dataclass(slots=True)

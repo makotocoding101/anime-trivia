@@ -39,6 +39,9 @@ export interface ScoreRow {
   name: string;
   score: number;
   streak: number;
+  /** Coins this game paid out. Present only on the final standings — the
+   * server omits it mid-game, because nothing has been earned yet. */
+  coins_earned?: number;
 }
 
 export interface RevealResult {

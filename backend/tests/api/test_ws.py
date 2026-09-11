@@ -159,6 +159,11 @@ def test_full_game_over_real_sockets(client: TestClient) -> None:
             reveal = recv_until(ws2, "reveal")
             correct_id = reveal["data"]["correct_option_id"]
             assert correct_id in {o["id"] for o in options}
+            # Mid-game scoreboards must not carry a payout — nothing has been
+            # earned yet, and "+0 coins" after every round would be a lie.
+            board = recv_until(ws1, "scoreboard")
+            assert all("coins_earned" not in row for row in board["data"]["rows"])
+
             results = {r["player_id"]: r for r in reveal["data"]["results"]}
             # Two players on two different options: at most one can be right,
             # and "correct" must agree with the key rather than be asserted
@@ -172,6 +177,14 @@ def test_full_game_over_real_sockets(client: TestClient) -> None:
         over = recv_until(ws1, "game_over")
         standings = over["data"]["standings"]
         assert {s["player_id"]: s["score"] for s in standings} == running
+
+        # The payout travels with the final standings so the client never has
+        # to reimplement the table: 10 for finishing, 1 coin per 20 points,
+        # and a podium bonus withheld from last place.
+        assert all("coins_earned" in s for s in standings)
+        winner, loser = standings[0], standings[-1]
+        assert winner["coins_earned"] == 10 + winner["score"] // 20 + 50
+        assert loser["coins_earned"] == 10 + loser["score"] // 20  # last of two
         # Ranking is by score descending (§07), whoever happened to guess well.
         assert [s["score"] for s in standings] == sorted(running.values(), reverse=True)
 

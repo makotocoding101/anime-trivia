@@ -12,6 +12,7 @@ export function GameOverScreen({ view, socket }: Props) {
   const winner = standings[0];
   const isHost = view.players.find((p) => p.id === view.you)?.is_host ?? false;
   const youWon = winner !== undefined && winner.player_id === view.you;
+  const mine = standings.find((row) => row.player_id === view.you);
 
   return (
     <>
@@ -27,6 +28,24 @@ export function GameOverScreen({ view, socket }: Props) {
           </>
         )}
       </div>
+
+      {/* Where points become coins. Without this the conversion is invisible
+          and it looks like the game took your score away. The total comes
+          from the server (economy.coins_awarded) rather than being recomputed
+          here, so the figure shown and the balance credited cannot drift. */}
+      {mine?.coins_earned !== undefined && (
+        <div className="payout">
+          <span className="label">coins earned</span>
+          <span className="amount">
+            <span aria-hidden="true">🪙</span> +{mine.coins_earned}
+          </span>
+          <p className="muted">
+            Your <b>{mine.score} points</b> this game convert into coins: 10 for
+            finishing, 1 per 20 points, plus a bonus for the podium. Points reset
+            every game — coins are your permanent balance.
+          </p>
+        </div>
+      )}
 
       <div className="panel">
         <div className="panel-head">
