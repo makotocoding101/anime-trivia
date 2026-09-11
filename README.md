@@ -149,8 +149,6 @@ Without `DATABASE_URL` the server falls back to the seed file with one synthetic
 persistence, so it runs with no database at all. With it, modes come from `game_mode` and results
 are recorded.
 
-Deployment runbook, cost breakdown and the AWS alternative: [`deploy/`](deploy/).
-
 ---
 
 ## Deployed
