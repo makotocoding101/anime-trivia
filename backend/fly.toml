@@ -1,0 +1,59 @@
+# OtaKizu API on Fly.io
+#
+# The machine count in this file IS invariant 7. Two machines are
+# not "more capacity" for this app — they are two independent room registries,
+# so a player creating room ABCD on one and a friend joining ABCD on the other
+# land in different games with no error on either side. app/config.py refuses
+# to boot on WEB_CONCURRENCY > 1, but it reads environment variables inside a
+# single process: it cannot see a peer machine. So the guard has to live here.
+#
+#   - min_machines_running = 1 and never `fly scale count 2`
+#   - auto_stop_machines off, so a stop never lands mid-game
+#   - one region, always
+#
+# Verify after every deploy: `fly status` must list exactly one machine.
+#
+# Consequence of one machine, accepted deliberately: there is nothing to drain
+# onto, so every deploy ends every live game. Deploy between demos, not during.
+
+app = "otakizu-api"
+primary_region = "iad"
+
+[build]
+  dockerfile = "Dockerfile"
+
+[env]
+  # Idempotent: the entrypoint seeds with --if-empty, so a restart is a no-op
+  # once the bank is in.
+  SEED_ON_START = "1"
+  # One uvicorn worker. The in-process guard that reads this is the second
+  # line of defence; the first is that this file says 1.
+  WEB_CONCURRENCY = "1"
+
+[http_service]
+  internal_port = 8000
+  force_https = true
+  auto_stop_machines = "off"
+  auto_start_machines = true
+  min_machines_running = 1
+  processes = ["app"]
+
+  # Fly proxies WebSockets natively — no upgrade-header configuration and no
+  # sticky-session story, which is most of why this app is here rather than
+  # behind an ALB.
+
+  [[http_service.checks]]
+    interval = "30s"
+    timeout = "5s"
+    grace_period = "20s"
+    method = "GET"
+    path = "/api/health"
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "512mb"
+  cpus = 1
+
+# No release_command: docker-entrypoint.sh already runs `alembic upgrade head`
+# before uvicorn binds, and with a single instance there is no concurrent-writer
+# race to protect against.
